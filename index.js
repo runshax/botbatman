@@ -56,7 +56,7 @@ bot.on('polling_error', (error) => {
   console.error('Polling error:', error.code, error.message);
 });
 
-bot.onText(/\/dev(?:\s+(.+))?/, (msg, match) => {
+bot.onText(/^\/dev(?:\s+(.+))?$/, (msg, match) => {
   const userId = msg.from.id.toString();
 
   const subCommand = match[1] ? match[1].toLowerCase().trim() : null;
