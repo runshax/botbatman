@@ -2,33 +2,48 @@ const TelegramBot = require('node-telegram-bot-api');
 const cron = require('node-cron');
 const express = require('express');
 
-// 1. DUMMY WEB SERVER (Important for Render)
+// 1. HEALTH CHECK SERVER (Required for Koyeb)
+// Koyeb needs to see a "website" running on port 8080 or it will restart the bot.
 const app = express();
-app.get('/', (req, res) => res.send('Bot is Awake!'));
-app.listen(process.env.PORT || 3000);
+const PORT = process.env.PORT || 8080;
 
-// 2. INITIALIZE BOT
+app.get('/', (req, res) => {
+  res.send('Bot is online and healthy! 🚀');
+});
+
+app.listen(PORT, () => {
+  console.log(`Health check server is listening on port ${PORT}`);
+});
+
+// 2. BOT SETUP
 const token = process.env.BOT_TOKEN;
 const chatId = process.env.CHAT_ID;
 const bot = new TelegramBot(token, { polling: true });
 
-// TIMEZONE SETTING
-const myTimezone = "Asia/Jakarta"; // Change to your local city (e.g., Asia/Manila, Europe/London)
+console.log("Telegram bot is starting...");
 
-// 3. MORNING REMINDER: 8:00 AM (Mon-Fri)
+// 3. SCHEDULED REMINDERS (Mon-Fri)
+const timezone = "Asia/Jakarta";
+
+// Morning Reminder: 8:00 AM
 cron.schedule('0 8 * * 1-5', () => {
-    bot.sendMessage(chatId, "☀️ **Good Morning!**\nTime to start working. Have a productive day!");
+  bot.sendMessage(chatId, "☀️ **Good Morning!**\nTime to start working. Let's have a productive day!");
+  console.log("Morning reminder sent at 8:00 AM");
 }, {
-    scheduled: true,
-    timezone: myTimezone
+  scheduled: true,
+  timezone: timezone
 });
 
-// AFTERNOON REMINDER: 4:45 PM (Mon-Fri)
+// Afternoon Reminder: 4:45 PM
 cron.schedule('45 16 * * 1-5', () => {
-    bot.sendMessage(chatId, "📝 **Reminder:**\nPlease don't forget to enter your **time sheet** before you log off!");
+  bot.sendMessage(chatId, "📝 **Reminder:**\nPlease don't forget to enter your **time sheet** before you log off!");
+  console.log("Afternoon reminder sent at 4:45 PM");
 }, {
-    scheduled: true,
-    timezone: "Asia/Jakarta" // Make sure this matches your city!
+  scheduled: true,
+  timezone: timezone
 });
 
-console.log("Bot started. Reminders scheduled for 8:00 AM and 4:30 PM (Mon-Fri).");
+// Optional: Log a message when the bot receives /start
+bot.onText(/\/start/, (msg) => {
+  bot.sendMessage(msg.chat.id, "Bot is active! I will remind you at 8:00 AM and 4:45 PM on weekdays.");
+});
