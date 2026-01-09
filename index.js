@@ -67,6 +67,7 @@ bot.onText(/\/dev(?:\s+(.+))?/, (msg, match) => {
     id: process.env.DEVID || "🇮🇩 ID: Not set",
     th: process.env.DEVTH || "🇹🇭 TH: Not set",
     vn: process.env.DEVVN || "🇻🇳 VN: Not set",
+    vn2: process.env.DEVVN2 || "🇻🇳 VN2: Not set",
     ph: process.env.DEVPH || "🇵🇭 PH: Not set"
   };
 
