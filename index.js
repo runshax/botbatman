@@ -24,9 +24,9 @@ const bot = new TelegramBot(token, { polling: true });
 console.log("Telegram bot is starting...");
 
 // Send a test message on startup
-bot.sendMessage(chatId, "🤖 Test message: Bot is now online! via docker")
-  .then(() => console.log("Test message sent successfully!"))
-  .catch(err => console.error("Error sending test message:", err));
+// bot.sendMessage(chatId, "🤖 Test message: Bot is now online! via docker")
+//   .then(() => console.log("Test message sent successfully!"))
+//   .catch(err => console.error("Error sending test message:", err));
 
 // 3. SCHEDULED REMINDERS (Mon-Fri)
 const timezone = "Asia/Jakarta";
@@ -56,8 +56,31 @@ bot.on('polling_error', (error) => {
   console.error('Polling error:', error.code, error.message);
 });
 
-// // Optional: Log a message when the bot receives /start
-// bot.onText(/\/start/, (msg) => {
-//   bot.sendMessage(msg.chat.id, "Bot is active! I will remind you at 8:00 AM and 4:45 PM on weekdays.")
-//     .catch(err => console.error("Error sending /start response:", err));
-// });
+bot.onText(/\/dev(?:\s+(.+))?/, (msg, match) => {
+  const userId = msg.from.id.toString();
+
+  const subCommand = match[1] ? match[1].toLowerCase().trim() : null;
+
+  // Prepare all your credentials
+  const creds = {
+    my: process.env.DEVMY || "🇲🇾 MY: Not set",
+    id: process.env.DEVID || "🇮🇩 ID: Not set",
+    th: process.env.DEVTH || "🇹🇭 TH: Not set",
+    vn: process.env.DEVVN || "🇻🇳 VN: Not set",
+    ph: process.env.DEVPH || "🇵🇭 PH: Not set"
+  };
+
+  let response = "";
+
+  if (subCommand && creds[subCommand]) {
+    // If you typed "/dev my", show only Malaysia
+    response = `🔐 **Dev Credential (${subCommand.toUpperCase()})**\n\n${creds[subCommand]}`;
+  } else {
+    // If you typed just "/dev", show everything
+    response = `🔐 **All Regional Credentials**\n---------------------------\n` +
+      Object.values(creds).join('\n') +
+      `\n\n_Type "/dev my" for specific notes._`;
+  }
+
+  bot.sendMessage(msg.chat.id, response, { parse_mode: 'Markdown' });
+});
