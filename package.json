@@ -6,9 +6,10 @@
     "start": "node index.js"
   },
   "dependencies": {
-    "node-telegram-bot-api": "^0.67.0",
-    "node-cron": "^3.0.3",
+    "dotenv": "^16.0.3",
     "express": "^4.18.2",
-    "dotenv": "^16.0.3"
+    "hot-formula-parser": "^4.0.0",
+    "node-cron": "^3.0.3",
+    "node-telegram-bot-api": "^0.67.0"
   }
 }
