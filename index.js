@@ -1,6 +1,7 @@
 const TelegramBot = require('node-telegram-bot-api');
 const cron = require('node-cron');
 const express = require('express');
+const { encryptPassword } = require('./services/passwordEncryption');
 require('dotenv').config();
 
 // 1. HEALTH CHECK SERVER (Required for Koyeb)
@@ -84,4 +85,43 @@ bot.onText(/^\/dev(?:\s+(.+))?$/, (msg, match) => {
   }
 
   bot.sendMessage(msg.chat.id, response, { parse_mode: 'Markdown' });
+});
+
+// ==================== NEW ENHANCEMENT: PASSWORD RESET ====================
+bot.onText(/^\/resetpass(?:\s+(.+))?$/, async (msg, match) => {
+  try {
+    const input = match[1];
+
+    if (!input) {
+      return bot.sendMessage(msg.chat.id,
+        "❌ *Format salah!*\n\n*Usage:*\n`/resetpass username password`\n\n*Example:*\n`/resetpass email@gmail.com pass1234`",
+        { parse_mode: 'Markdown' }
+      ).catch(err => console.error("Error sending resetpass help:", err));
+    }
+
+    const parts = input.trim().split(/\s+/);
+
+    if (parts.length !== 2) {
+      return bot.sendMessage(msg.chat.id,
+        "❌ *Format salah!*\n\nHarus ada 2 parameter: username dan password\n\n*Example:*\n`/resetpass email@gmail.com pass1234`",
+        { parse_mode: 'Markdown' }
+      ).catch(err => console.error("Error sending resetpass error:", err));
+    }
+
+    const [username, password] = parts;
+    const uuid = process.env.DEFAULT_UUID || 'reset';
+
+    bot.sendMessage(msg.chat.id, "⏳ *Processing...*\nGenerating encrypted password hash...", { parse_mode: 'Markdown' })
+      .catch(err => console.error("Error sending processing message:", err));
+
+    const result = await encryptPassword(username, password, uuid);
+
+    bot.sendMessage(msg.chat.id, `\`\`\`\n${result.message}\n\`\`\``, { parse_mode: 'Markdown' })
+      .catch(err => console.error("Error sending resetpass result:", err));
+
+  } catch (err) {
+    console.error("Error in /resetpass command:", err);
+    bot.sendMessage(msg.chat.id, "❌ *Error!*\nSomething went wrong while processing your request.", { parse_mode: 'Markdown' })
+      .catch(err => console.error("Error sending error message:", err));
+  }
 });
