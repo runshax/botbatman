@@ -108,26 +108,42 @@ bot.onText(/^\/dev(?:\s+(.+))?$/, (msg, match) => {
 
   const subCommand = match[1] ? match[1].toLowerCase().trim() : null;
 
+  // Function to format credentials with line breaks
+  const formatCred = (credString, flag) => {
+    if (!credString || credString.includes("Not set")) {
+      return `${flag}: Not set`;
+    }
+
+    // Split by "/" and trim each part
+    const parts = credString.split('/').map(p => p.trim());
+
+    if (parts.length >= 3) {
+      return `${flag}\nUsername: ${parts[0]}\nPassword: ${parts[1]}\nSFGO: ${parts[2]}`;
+    }
+
+    return `${flag}\n${credString}`;
+  };
+
   // Prepare all your credentials
   const creds = {
-    my: process.env.DEVMY || "🇲🇾 MY: Not set",
-    id: process.env.DEVID || "🇮🇩 ID: Not set",
-    th: process.env.DEVTH || "🇹🇭 TH: Not set",
-    vn: process.env.DEVVN || "🇻🇳 VN: Not set",
-    vn2: process.env.DEVVN2 || "🇻🇳 VN2: Not set",
-    ph: process.env.DEVPH || "🇵🇭 PH: Not set"
+    my: formatCred(process.env.DEVMY, "🇲🇾 MY"),
+    id: formatCred(process.env.DEVID, "🇮🇩 ID"),
+    th: formatCred(process.env.DEVTH, "🇹🇭 TH"),
+    vn: formatCred(process.env.DEVVN, "🇻🇳 VN"),
+    vn2: formatCred(process.env.DEVVN2, "🇻🇳 VN2"),
+    ph: formatCred(process.env.DEVPH, "🇵🇭 PH")
   };
 
   let response = "";
 
   if (subCommand && creds[subCommand]) {
     // If you typed "/dev my", show only Malaysia
-    response = `🔐 **Dev Credential (${subCommand.toUpperCase()})**\n\n${creds[subCommand]}`;
+    response = `🔐 *Dev Credential (${subCommand.toUpperCase()})*\n\n${creds[subCommand]}`;
   } else {
     // If you typed just "/dev", show everything
-    response = `🔐 **All Regional Credentials**\n---------------------------\n` +
-      Object.values(creds).join('\n') +
-      `\n\n_Type "/dev my" for specific notes._`;
+    response = `🔐 *All Regional Credentials*\n---------------------------\n\n` +
+      Object.values(creds).join('\n\n---------------------------\n\n') +
+      `\n\n_Type "/dev my" for specific country._`;
   }
 
   bot.sendMessage(msg.chat.id, response, { parse_mode: 'Markdown' });
