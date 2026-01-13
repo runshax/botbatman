@@ -144,10 +144,10 @@ bot.onText(/^\/help$/, (msg) => {
     `   Check Indonesian public holidays\n` +
     `   _Example:_ \`/holiday\`\n\n` +
 
-    `7️⃣ *Auto SFGO Formatter*\n` +
-    `   Type "sfgo" + number to auto-format\n` +
+    `7️⃣ */sfgo[number]*\n` +
+    `   Auto-format SFGO numbers\n` +
     `   _Example:_\n` +
-    `   Type: \`sfgo11199\`\n` +
+    `   \`/sfgo11199\`\n` +
     `   Result: \`sfgo11199-dev-gd|http://localhost:3001\`\n\n` +
 
     `💡 _Tip: Type any command without parameters to see usage examples!_`;
@@ -337,9 +337,8 @@ bot.onText(/^\/parse(?:\s+(.+))?$/, async (msg, match) => {
 });
 
 // ==================== NEW ENHANCEMENT: SFGO FORMATTER ====================
-// Auto-detect "sfgo" followed by numbers (e.g., "sfgo11199")
-// Only triggers when message STARTS with "sfgo"
-bot.onText(/^sfgo(\d+)/i, async (msg, match) => {
+// Auto-detect "/sfgo" followed by numbers (e.g., "/sfgo11199")
+bot.onText(/^\/sfgo(\d+)/i, async (msg, match) => {
   try {
     const number = match[1];
     const result = `sfgo${number}-dev-gd|http://localhost:3001`;
