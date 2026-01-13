@@ -25,6 +25,38 @@ const bot = new TelegramBot(token, { polling: true });
 
 console.log("Telegram bot is starting...");
 
+// 3. SCHEDULED REMINDERS (Mon-Fri)
+const timezone = "Asia/Jakarta";
+
+// Morning Reminder: 8:05 AM (Mon-Fri)
+cron.schedule('5 8 * * 1-5', () => {
+  const today = new Date();
+  const isMonday = today.getDay() === 1;
+
+  let message = "☀️ *Good Morning!*\nTime to start working. Let's have a productive day!";
+
+  if (isMonday) {
+    message += "\n\nPlease check and fix last week's tickets!";
+  }
+
+  bot.sendMessage(chatId, message, { parse_mode: 'Markdown' })
+    .catch(err => console.error("Error sending morning reminder:", err));
+  console.log(`Morning reminder sent at 8:05 AM${isMonday ? ' (with ticket reminder)' : ''}`);
+}, {
+  scheduled: true,
+  timezone: timezone
+});
+
+// Afternoon Reminder: 4:45 PM (Mon-Fri)
+cron.schedule('45 16 * * 1-5', () => {
+  bot.sendMessage(chatId, "📝 *Reminder:*\nDon't forget to fill in your timesheet!", { parse_mode: 'Markdown' })
+    .catch(err => console.error("Error sending afternoon reminder:", err));
+  console.log("Afternoon reminder sent at 4:45 PM");
+}, {
+  scheduled: true,
+  timezone: timezone
+});
+
 // Error handling for polling errors
 bot.on('polling_error', (error) => {
   console.error('Polling error:', error.code, error.message);
