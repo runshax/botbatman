@@ -108,8 +108,8 @@ bot.onText(/^\/dev(?:\s+(.+))?$/, (msg, match) => {
 
   const subCommand = match[1] ? match[1].toLowerCase().trim() : null;
 
-  // Function to format credentials with line breaks
-  const formatCred = (credString, flag) => {
+  // Function to format credentials with full details (for specific country)
+  const formatCredFull = (credString, flag) => {
     if (!credString || credString.includes("Not set")) {
       return `${flag}: Not set`;
     }
@@ -124,26 +124,55 @@ bot.onText(/^\/dev(?:\s+(.+))?$/, (msg, match) => {
     return `${flag}\n${credString}`;
   };
 
-  // Prepare all your credentials
-  const creds = {
-    my: formatCred(process.env.DEVMY, "🇲🇾 MY"),
-    id: formatCred(process.env.DEVID, "🇮🇩 ID"),
-    th: formatCred(process.env.DEVTH, "🇹🇭 TH"),
-    vn: formatCred(process.env.DEVVN, "🇻🇳 VN"),
-    vn2: formatCred(process.env.DEVVN2, "🇻🇳 VN2"),
-    ph: formatCred(process.env.DEVPH, "🇵🇭 PH")
+  // Function to format credentials - only show SFGO (for all countries list)
+  const formatCredShort = (credString, flag) => {
+    if (!credString || credString.includes("Not set")) {
+      return `${flag}: Not set`;
+    }
+
+    // Split by "/" and trim each part
+    const parts = credString.split('/').map(p => p.trim());
+
+    if (parts.length >= 3) {
+      // Only show flag and SFGO
+      return `${flag}\n${parts[2]}`;
+    }
+
+    return `${flag}\n${credString}`;
   };
 
   let response = "";
 
-  if (subCommand && creds[subCommand]) {
-    // If you typed "/dev my", show only Malaysia
-    response = `🔐 *Dev Credential (${subCommand.toUpperCase()})*\n\n${creds[subCommand]}`;
+  if (subCommand) {
+    // Specific country requested - show full credentials
+    const credsFull = {
+      my: formatCredFull(process.env.DEVMY, "🇲🇾 MY"),
+      id: formatCredFull(process.env.DEVID, "🇮🇩 ID"),
+      th: formatCredFull(process.env.DEVTH, "🇹🇭 TH"),
+      vn: formatCredFull(process.env.DEVVN, "🇻🇳 VN"),
+      vn2: formatCredFull(process.env.DEVVN2, "🇻🇳 VN2"),
+      ph: formatCredFull(process.env.DEVPH, "🇵🇭 PH")
+    };
+
+    if (credsFull[subCommand]) {
+      response = `🔐 *Dev Credential (${subCommand.toUpperCase()})*\n\n${credsFull[subCommand]}`;
+    } else {
+      response = `❌ *Country not found!*\n\nAvailable: my, id, th, vn, vn2, ph`;
+    }
   } else {
-    // If you typed just "/dev", show everything
+    // No country specified - show only SFGO for all
+    const credsShort = {
+      my: formatCredShort(process.env.DEVMY, "🇲🇾 MY"),
+      id: formatCredShort(process.env.DEVID, "🇮🇩 ID"),
+      th: formatCredShort(process.env.DEVTH, "🇹🇭 TH"),
+      vn: formatCredShort(process.env.DEVVN, "🇻🇳 VN"),
+      vn2: formatCredShort(process.env.DEVVN2, "🇻🇳 VN2"),
+      ph: formatCredShort(process.env.DEVPH, "🇵🇭 PH")
+    };
+
     response = `🔐 *All Regional Credentials*\n---------------------------\n\n` +
-      Object.values(creds).join('\n\n---------------------------\n\n') +
-      `\n\n_Type "/dev my" for specific country._`;
+      Object.values(credsShort).join('\n\n---------------------------\n\n') +
+      `\n\n_Type "/dev my" for full credentials._`;
   }
 
   bot.sendMessage(msg.chat.id, response, { parse_mode: 'Markdown' });
