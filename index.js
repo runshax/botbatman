@@ -227,10 +227,8 @@ bot.onText(/sfgo(\d+)/i, async (msg, match) => {
     const number = match[1];
     const result = `sfgo${number}-dev-gd|http://localhost:3001`;
 
-    bot.sendMessage(msg.chat.id,
-      `✅ *SFGO Format:*\n\`${result}\``,
-      { parse_mode: 'Markdown' }
-    ).catch(err => console.error("Error sending sfgo result:", err));
+    bot.sendMessage(msg.chat.id, result)
+      .catch(err => console.error("Error sending sfgo result:", err));
 
   } catch (err) {
     console.error("Error in sfgo auto-format:", err);
