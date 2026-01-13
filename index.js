@@ -338,7 +338,8 @@ bot.onText(/^\/parse(?:\s+(.+))?$/, async (msg, match) => {
 
 // ==================== NEW ENHANCEMENT: SFGO FORMATTER ====================
 // Auto-detect "sfgo" followed by numbers (e.g., "sfgo11199")
-bot.onText(/sfgo(\d+)/i, async (msg, match) => {
+// Only triggers when message STARTS with "sfgo"
+bot.onText(/^sfgo(\d+)/i, async (msg, match) => {
   try {
     const number = match[1];
     const result = `sfgo${number}-dev-gd|http://localhost:3001`;
