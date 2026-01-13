@@ -91,6 +91,12 @@ bot.onText(/^\/help$/, (msg) => {
     `   \`/parse ROUND(3.14159, 2)\`\n` +
     `   \`/parse MAX(100,50,75)\`\n\n` +
 
+    `5️⃣ *Auto SFGO Formatter*\n` +
+    `   Type "sfgo" + number to auto-format\n` +
+    `   _Example:_\n` +
+    `   Type: \`sfgo11199\`\n` +
+    `   Result: \`sfgo11199-dev-gd|http://localhost:3001\`\n\n` +
+
     `💡 _Tip: Type any command without parameters to see usage examples!_`;
 
   bot.sendMessage(msg.chat.id, helpMessage, { parse_mode: 'Markdown' })
@@ -211,5 +217,22 @@ bot.onText(/^\/parse(?:\s+(.+))?$/, async (msg, match) => {
     console.error("Error in /parse command:", err);
     bot.sendMessage(msg.chat.id, "❌ *Error!*\nSomething went wrong while processing your formula.", { parse_mode: 'Markdown' })
       .catch(err => console.error("Error sending error message:", err));
+  }
+});
+
+// ==================== NEW ENHANCEMENT: SFGO FORMATTER ====================
+// Auto-detect "sfgo" followed by numbers (e.g., "sfgo11199")
+bot.onText(/sfgo(\d+)/i, async (msg, match) => {
+  try {
+    const number = match[1];
+    const result = `sfgo${number}-dev-gd|http://localhost:3001`;
+
+    bot.sendMessage(msg.chat.id,
+      `✅ *SFGO Format:*\n\`${result}\``,
+      { parse_mode: 'Markdown' }
+    ).catch(err => console.error("Error sending sfgo result:", err));
+
+  } catch (err) {
+    console.error("Error in sfgo auto-format:", err);
   }
 });
