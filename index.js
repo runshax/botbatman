@@ -3,6 +3,7 @@ const cron = require('node-cron');
 const express = require('express');
 const { encryptPassword } = require('./services/passwordEncryption');
 const { parseFormula, addCustomFunction } = require('./services/formulaParser');
+const { getTodayHoliday, getTomorrowHoliday, getUpcomingHolidays, formatDateIndonesian } = require('./services/indonesianHolidays');
 require('dotenv').config();
 
 // Store message IDs for deletion
@@ -49,11 +50,18 @@ const trackMessage = (chatId, messageId) => {
 cron.schedule('5 8 * * 1-5', () => {
   const today = new Date();
   const isMonday = today.getDay() === 1;
+  const holiday = getTodayHoliday();
 
-  let message = "☀️ *Good Morning!*\nTime to start working. Let's have a productive day!";
+  // Skip reminder if today is a public holiday
+  if (holiday) {
+    console.log(`Skipping morning reminder - Today is ${holiday.name}`);
+    return;
+  }
+
+  let message = "😄 Pagi tim Payroll! Hari baru, angka baru, semoga tanpa revisi.";
 
   if (isMonday) {
-    message += "\n\nPlease check and fix last week's tickets!";
+    message += "\n\nJangan lupa cek dan perbaiki tiket minggu lalu ya!";
   }
 
   bot.sendMessage(chatId, message, { parse_mode: 'Markdown' })
@@ -67,7 +75,25 @@ cron.schedule('5 8 * * 1-5', () => {
 
 // Afternoon Reminder: 4:45 PM (Mon-Fri)
 cron.schedule('45 16 * * 1-5', () => {
-  bot.sendMessage(chatId, "📝 *Reminder:*\nDon't forget to fill in your timesheet!", { parse_mode: 'Markdown' })
+  const holiday = getTodayHoliday();
+
+  // Skip reminder if today is a public holiday
+  if (holiday) {
+    console.log(`Skipping afternoon reminder - Today is ${holiday.name}`);
+    return;
+  }
+
+  // Check if tomorrow is a public holiday
+  const tomorrowHoliday = getTomorrowHoliday();
+
+  let message = "😂 Siap-siap pulang! Inget isi timesheet sebelum lupa diri sendiri.";
+
+  // Add warning if tomorrow is a holiday
+  if (tomorrowHoliday) {
+    message += `\n\n⚠️ *Besok libur: ${tomorrowHoliday.name}*\nBiarkan repo damai.`;
+  }
+
+  bot.sendMessage(chatId, message, { parse_mode: 'Markdown' })
     .then(msg => trackMessage(msg.chat.id, msg.message_id))
     .catch(err => console.error("Error sending afternoon reminder:", err));
   console.log("Afternoon reminder sent at 4:45 PM");
@@ -114,7 +140,11 @@ bot.onText(/^\/help$/, (msg) => {
     `   Delete all bot messages in this chat\n` +
     `   _Example:_ \`/clear\`\n\n` +
 
-    `6️⃣ *Auto SFGO Formatter*\n` +
+    `6️⃣ */holiday*\n` +
+    `   Check Indonesian public holidays\n` +
+    `   _Example:_ \`/holiday\`\n\n` +
+
+    `7️⃣ *Auto SFGO Formatter*\n` +
     `   Type "sfgo" + number to auto-format\n` +
     `   _Example:_\n` +
     `   Type: \`sfgo11199\`\n` +
@@ -371,6 +401,47 @@ bot.onText(/^\/clear$/, async (msg) => {
   } catch (err) {
     console.error("Error in /clear command:", err);
     bot.sendMessage(msg.chat.id, "❌ *Error!*\nSomething went wrong while clearing messages.", { parse_mode: 'Markdown' })
+      .then(msg => trackMessage(msg.chat.id, msg.message_id))
+      .catch(err => console.error("Error sending error message:", err));
+  }
+});
+
+// ==================== HOLIDAY COMMAND ====================
+bot.onText(/^\/holiday$/, async (msg) => {
+  try {
+    const today = getTodayHoliday();
+    const tomorrow = getTomorrowHoliday();
+    const upcoming = getUpcomingHolidays(5);
+
+    let message = "🗓️ *Indonesian Public Holidays*\n\n";
+
+    // Today's holiday status
+    if (today) {
+      message += `📍 *Today:* ${today.name}\n${formatDateIndonesian(today.date)}\n\n`;
+    } else {
+      message += `📍 *Today:* Not a holiday\n\n`;
+    }
+
+    // Tomorrow's holiday status
+    if (tomorrow) {
+      message += `⚠️ *Tomorrow:* ${tomorrow.name}\n${formatDateIndonesian(tomorrow.date)}\n\n`;
+    }
+
+    // Upcoming holidays
+    if (upcoming.length > 0) {
+      message += `*Upcoming Holidays:*\n`;
+      upcoming.forEach((holiday, index) => {
+        message += `${index + 1}. ${holiday.name}\n   ${formatDateIndonesian(holiday.date)}\n`;
+      });
+    }
+
+    bot.sendMessage(msg.chat.id, message, { parse_mode: 'Markdown' })
+      .then(msg => trackMessage(msg.chat.id, msg.message_id))
+      .catch(err => console.error("Error sending holiday info:", err));
+
+  } catch (err) {
+    console.error("Error in /holiday command:", err);
+    bot.sendMessage(msg.chat.id, "❌ *Error!*\nSomething went wrong while fetching holiday information.", { parse_mode: 'Markdown' })
       .then(msg => trackMessage(msg.chat.id, msg.message_id))
       .catch(err => console.error("Error sending error message:", err));
   }
