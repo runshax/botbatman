@@ -5,6 +5,9 @@ const { encryptPassword } = require('./services/passwordEncryption');
 const { parseFormula, addCustomFunction } = require('./services/formulaParser');
 require('dotenv').config();
 
+// Store message IDs for deletion
+const botMessages = new Map(); // chatId -> array of messageIds
+
 // 1. HEALTH CHECK SERVER (Required for Koyeb)
 // Koyeb needs to see a "website" running on port 8080 or it will restart the bot.
 const app = express();
@@ -28,6 +31,20 @@ console.log("Telegram bot is starting...");
 // 3. SCHEDULED REMINDERS (Mon-Fri)
 const timezone = "Asia/Jakarta";
 
+// Helper function to track bot messages
+const trackMessage = (chatId, messageId) => {
+  if (!botMessages.has(chatId)) {
+    botMessages.set(chatId, []);
+  }
+  botMessages.get(chatId).push(messageId);
+
+  // Keep only last 100 messages per chat to avoid memory issues
+  const messages = botMessages.get(chatId);
+  if (messages.length > 100) {
+    messages.shift();
+  }
+};
+
 // Morning Reminder: 8:05 AM (Mon-Fri)
 cron.schedule('5 8 * * 1-5', () => {
   const today = new Date();
@@ -40,6 +57,7 @@ cron.schedule('5 8 * * 1-5', () => {
   }
 
   bot.sendMessage(chatId, message, { parse_mode: 'Markdown' })
+    .then(msg => trackMessage(msg.chat.id, msg.message_id))
     .catch(err => console.error("Error sending morning reminder:", err));
   console.log(`Morning reminder sent at 8:05 AM${isMonday ? ' (with ticket reminder)' : ''}`);
 }, {
@@ -50,6 +68,7 @@ cron.schedule('5 8 * * 1-5', () => {
 // Afternoon Reminder: 4:45 PM (Mon-Fri)
 cron.schedule('45 16 * * 1-5', () => {
   bot.sendMessage(chatId, "📝 *Reminder:*\nDon't forget to fill in your timesheet!", { parse_mode: 'Markdown' })
+    .then(msg => trackMessage(msg.chat.id, msg.message_id))
     .catch(err => console.error("Error sending afternoon reminder:", err));
   console.log("Afternoon reminder sent at 4:45 PM");
 }, {
@@ -91,7 +110,11 @@ bot.onText(/^\/help$/, (msg) => {
     `   \`/parse ROUND(3.14159, 2)\`\n` +
     `   \`/parse MAX(100,50,75)\`\n\n` +
 
-    `5️⃣ *Auto SFGO Formatter*\n` +
+    `5️⃣ */clear*\n` +
+    `   Delete all bot messages in this chat\n` +
+    `   _Example:_ \`/clear\`\n\n` +
+
+    `6️⃣ *Auto SFGO Formatter*\n` +
     `   Type "sfgo" + number to auto-format\n` +
     `   _Example:_\n` +
     `   Type: \`sfgo11199\`\n` +
@@ -100,6 +123,7 @@ bot.onText(/^\/help$/, (msg) => {
     `💡 _Tip: Type any command without parameters to see usage examples!_`;
 
   bot.sendMessage(msg.chat.id, helpMessage, { parse_mode: 'Markdown' })
+    .then(msg => trackMessage(msg.chat.id, msg.message_id))
     .catch(err => console.error("Error sending help message:", err));
 });
 
@@ -118,7 +142,8 @@ bot.onText(/^\/dev(?:\s+(.+))?$/, (msg, match) => {
     const parts = credString.split('/').map(p => p.trim());
 
     if (parts.length >= 3) {
-      return `${flag}\nUsername: ${parts[0]}\nPassword: ${parts[1]}\nSFGO: ${parts[2]}`;
+      // Wrap in backticks to prevent Markdown parsing issues
+      return `${flag}\nUsername: \`${parts[0]}\`\nPassword: \`${parts[1]}\`\nSFGO: \`${parts[2]}\``;
     }
 
     return `${flag}\n${credString}`;
@@ -175,7 +200,9 @@ bot.onText(/^\/dev(?:\s+(.+))?$/, (msg, match) => {
       `\n\n_Type "/dev my" for full credentials._`;
   }
 
-  bot.sendMessage(msg.chat.id, response, { parse_mode: 'Markdown' });
+  bot.sendMessage(msg.chat.id, response, { parse_mode: 'Markdown' })
+    .then(msg => trackMessage(msg.chat.id, msg.message_id))
+    .catch(err => console.error("Error sending dev credentials:", err));
 });
 
 // ==================== NEW ENHANCEMENT: PASSWORD RESET ====================
@@ -187,7 +214,9 @@ bot.onText(/^\/reset(?:\s+(.+))?$/, async (msg, match) => {
       return bot.sendMessage(msg.chat.id,
         "❌ *Format salah!*\n\n*Usage:*\n`/reset username password`\n\n*Example:*\n`/reset email@gmail.com pass1234`",
         { parse_mode: 'Markdown' }
-      ).catch(err => console.error("Error sending reset help:", err));
+      )
+        .then(msg => trackMessage(msg.chat.id, msg.message_id))
+        .catch(err => console.error("Error sending reset help:", err));
     }
 
     const parts = input.trim().split(/\s+/);
@@ -196,23 +225,28 @@ bot.onText(/^\/reset(?:\s+(.+))?$/, async (msg, match) => {
       return bot.sendMessage(msg.chat.id,
         "❌ *Format salah!*\n\nHarus ada 2 parameter: username dan password\n\n*Example:*\n`/reset email@gmail.com pass1234`",
         { parse_mode: 'Markdown' }
-      ).catch(err => console.error("Error sending reset error:", err));
+      )
+        .then(msg => trackMessage(msg.chat.id, msg.message_id))
+        .catch(err => console.error("Error sending reset error:", err));
     }
 
     const [username, password] = parts;
     const uuid = process.env.DEFAULT_UUID || 'reset';
 
     bot.sendMessage(msg.chat.id, "⏳ *Processing...*\nGenerating encrypted password hash...", { parse_mode: 'Markdown' })
+      .then(msg => trackMessage(msg.chat.id, msg.message_id))
       .catch(err => console.error("Error sending processing message:", err));
 
     const result = await encryptPassword(username, password, uuid);
 
     bot.sendMessage(msg.chat.id, `\`\`\`\n${result.message}\n\`\`\``, { parse_mode: 'Markdown' })
+      .then(msg => trackMessage(msg.chat.id, msg.message_id))
       .catch(err => console.error("Error sending reset result:", err));
 
   } catch (err) {
     console.error("Error in /reset command:", err);
     bot.sendMessage(msg.chat.id, "❌ *Error!*\nSomething went wrong while processing your request.", { parse_mode: 'Markdown' })
+      .then(msg => trackMessage(msg.chat.id, msg.message_id))
       .catch(err => console.error("Error sending error message:", err));
   }
 });
@@ -235,7 +269,9 @@ bot.onText(/^\/parse(?:\s+(.+))?$/, async (msg, match) => {
         "`/parse DOUBLE(21)` - multiply by 2\n" +
         "`/parse TRIPLE(10)` - multiply by 3",
         { parse_mode: 'Markdown' }
-      ).catch(err => console.error("Error sending parse help:", err));
+      )
+        .then(msg => trackMessage(msg.chat.id, msg.message_id))
+        .catch(err => console.error("Error sending parse help:", err));
     }
 
     // Parse the formula
@@ -247,7 +283,9 @@ bot.onText(/^\/parse(?:\s+(.+))?$/, async (msg, match) => {
         `✅ *Result:* \`${result.result}\`\n\n` +
         `Formula: \`${formula}\``,
         { parse_mode: 'Markdown' }
-      ).catch(err => console.error("Error sending parse result:", err));
+      )
+        .then(msg => trackMessage(msg.chat.id, msg.message_id))
+        .catch(err => console.error("Error sending parse result:", err));
     } else {
       // Error - show error message
       bot.sendMessage(msg.chat.id,
@@ -255,12 +293,15 @@ bot.onText(/^\/parse(?:\s+(.+))?$/, async (msg, match) => {
         `*Formula:* \`${formula}\`\n` +
         `*Error:* ${result.error}`,
         { parse_mode: 'Markdown' }
-      ).catch(err => console.error("Error sending parse error:", err));
+      )
+        .then(msg => trackMessage(msg.chat.id, msg.message_id))
+        .catch(err => console.error("Error sending parse error:", err));
     }
 
   } catch (err) {
     console.error("Error in /parse command:", err);
     bot.sendMessage(msg.chat.id, "❌ *Error!*\nSomething went wrong while processing your formula.", { parse_mode: 'Markdown' })
+      .then(msg => trackMessage(msg.chat.id, msg.message_id))
       .catch(err => console.error("Error sending error message:", err));
   }
 });
@@ -273,9 +314,64 @@ bot.onText(/sfgo(\d+)/i, async (msg, match) => {
     const result = `sfgo${number}-dev-gd|http://localhost:3001`;
 
     bot.sendMessage(msg.chat.id, result)
+      .then(msg => trackMessage(msg.chat.id, msg.message_id))
       .catch(err => console.error("Error sending sfgo result:", err));
 
   } catch (err) {
     console.error("Error in sfgo auto-format:", err);
+  }
+});
+
+// ==================== CLEAR COMMAND ====================
+bot.onText(/^\/clear$/, async (msg) => {
+  try {
+    const chatIdToClean = msg.chat.id;
+
+    if (!botMessages.has(chatIdToClean)) {
+      return bot.sendMessage(chatIdToClean, "✅ No bot messages to delete in this chat.")
+        .then(msg => trackMessage(msg.chat.id, msg.message_id))
+        .catch(err => console.error("Error sending clear response:", err));
+    }
+
+    const messageIds = botMessages.get(chatIdToClean) || [];
+    let deletedCount = 0;
+    let failedCount = 0;
+
+    // Send initial status message
+    const statusMsg = await bot.sendMessage(chatIdToClean, "🗑️ *Deleting bot messages...*", { parse_mode: 'Markdown' });
+
+    // Delete all tracked messages
+    for (const messageId of messageIds) {
+      try {
+        await bot.deleteMessage(chatIdToClean, messageId);
+        deletedCount++;
+      } catch (err) {
+        failedCount++;
+        // Message might be too old or already deleted
+      }
+    }
+
+    // Clear the tracked messages for this chat
+    botMessages.delete(chatIdToClean);
+
+    // Update status message with result
+    const resultMessage = `✅ *Cleanup Complete*\n\n` +
+      `Deleted: ${deletedCount} messages\n` +
+      (failedCount > 0 ? `Failed: ${failedCount} messages (too old or already deleted)` : '');
+
+    await bot.editMessageText(resultMessage, {
+      chat_id: chatIdToClean,
+      message_id: statusMsg.message_id,
+      parse_mode: 'Markdown'
+    });
+
+    // Track the status message so it can be deleted next time
+    trackMessage(chatIdToClean, statusMsg.message_id);
+
+  } catch (err) {
+    console.error("Error in /clear command:", err);
+    bot.sendMessage(msg.chat.id, "❌ *Error!*\nSomething went wrong while clearing messages.", { parse_mode: 'Markdown' })
+      .then(msg => trackMessage(msg.chat.id, msg.message_id))
+      .catch(err => console.error("Error sending error message:", err));
   }
 });
