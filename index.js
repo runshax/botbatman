@@ -172,8 +172,8 @@ bot.onText(/^\/dev(?:\s+(.+))?$/, (msg, match) => {
     const parts = credString.split('/').map(p => p.trim());
 
     if (parts.length >= 3) {
-      // Wrap in backticks to prevent Markdown parsing issues
-      return `${flag}\nUsername: \`${parts[0]}\`\nPassword: \`${parts[1]}\`\nSFGO: \`${parts[2]}\``;
+      // Return plain text format (no markdown) to avoid special char issues
+      return `${flag}\nUsername: ${parts[0]}\nPassword: ${parts[1]}\nSFGO: ${parts[2]}`;
     }
 
     return `${flag}\n${credString}`;
@@ -189,14 +189,18 @@ bot.onText(/^\/dev(?:\s+(.+))?$/, (msg, match) => {
     const parts = credString.split('/').map(p => p.trim());
 
     if (parts.length >= 3) {
-      // Only show flag and SFGO
-      return `${flag}\n${parts[2]}`;
+      // Extract only SFGO number (remove -dev-gd and URL)
+      const sfgoFull = parts[2];
+      const sfgoOnly = sfgoFull.split('|')[0]; // Get part before |
+      const sfgoNumber = sfgoOnly.replace('-dev-gd', ''); // Remove -dev-gd
+      return `${flag}\n${sfgoNumber}`;
     }
 
     return `${flag}\n${credString}`;
   };
 
   let response = "";
+  let useMarkdown = true;
 
   if (subCommand) {
     // Specific country requested - show full credentials
@@ -210,7 +214,8 @@ bot.onText(/^\/dev(?:\s+(.+))?$/, (msg, match) => {
     };
 
     if (credsFull[subCommand]) {
-      response = `🔐 *Dev Credential (${subCommand.toUpperCase()})*\n\n${credsFull[subCommand]}`;
+      response = `🔐 Dev Credential (${subCommand.toUpperCase()})\n\n${credsFull[subCommand]}`;
+      useMarkdown = false; // No markdown to avoid special char issues
     } else {
       response = `❌ *Country not found!*\n\nAvailable: my, id, th, vn, vn2, ph`;
     }
@@ -225,12 +230,13 @@ bot.onText(/^\/dev(?:\s+(.+))?$/, (msg, match) => {
       ph: formatCredShort(process.env.DEVPH, "🇵🇭 PH")
     };
 
-    response = `🔐 *All Regional Credentials*\n---------------------------\n\n` +
-      Object.values(credsShort).join('\n\n---------------------------\n\n') +
+    response = `🔐 *All Regional Credentials*\n---------------------------\n` +
+      Object.values(credsShort).join('\n---------------------------\n') +
       `\n\n_Type "/dev my" for full credentials._`;
   }
 
-  bot.sendMessage(msg.chat.id, response, { parse_mode: 'Markdown' })
+  const options = useMarkdown ? { parse_mode: 'Markdown' } : {};
+  bot.sendMessage(msg.chat.id, response, options)
     .then(msg => trackMessage(msg.chat.id, msg.message_id))
     .catch(err => console.error("Error sending dev credentials:", err));
 });
