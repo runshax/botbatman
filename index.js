@@ -46,6 +46,13 @@ const trackMessage = (chatId, messageId) => {
   }
 };
 
+// Helper function to delete user command message (not tracked, just deleted)
+const deleteCommand = (chatId, messageId) => {
+  bot.deleteMessage(chatId, messageId).catch(() => {
+    // Silently fail if bot doesn't have permission to delete
+  });
+};
+
 // Morning Reminder: 8:05 AM (Mon-Fri)
 cron.schedule('5 8 * * 1-5', () => {
   const today = new Date();
@@ -109,6 +116,7 @@ bot.on('polling_error', (error) => {
 
 // ==================== HELP COMMAND ====================
 bot.onText(/^\/help$/, (msg) => {
+  deleteCommand(msg.chat.id, msg.message_id);
   const helpMessage = `🤖 *Bot Command List*\n\n` +
     `*Available Commands:*\n\n` +
 
@@ -158,6 +166,7 @@ bot.onText(/^\/help$/, (msg) => {
 });
 
 bot.onText(/^\/dev(?:\s+(.+))?$/, (msg, match) => {
+  deleteCommand(msg.chat.id, msg.message_id);
   const userId = msg.from.id.toString();
 
   const subCommand = match[1] ? match[1].toLowerCase().trim() : null;
@@ -243,6 +252,7 @@ bot.onText(/^\/dev(?:\s+(.+))?$/, (msg, match) => {
 
 // ==================== NEW ENHANCEMENT: PASSWORD RESET ====================
 bot.onText(/^\/reset(?:\s+(.+))?$/, async (msg, match) => {
+  deleteCommand(msg.chat.id, msg.message_id);
   try {
     const input = match[1];
 
@@ -289,6 +299,7 @@ bot.onText(/^\/reset(?:\s+(.+))?$/, async (msg, match) => {
 
 // ==================== NEW ENHANCEMENT: FORMULA CALCULATOR ====================
 bot.onText(/^\/parse(?:\s+(.+))?$/, async (msg, match) => {
+  deleteCommand(msg.chat.id, msg.message_id);
   try {
     const formula = match[1];
 
@@ -345,6 +356,7 @@ bot.onText(/^\/parse(?:\s+(.+))?$/, async (msg, match) => {
 // ==================== NEW ENHANCEMENT: SFGO FORMATTER ====================
 // Auto-detect "/sfgo" followed by numbers (e.g., "/sfgo11199")
 bot.onText(/^\/sfgo(\d+)/i, async (msg, match) => {
+  deleteCommand(msg.chat.id, msg.message_id);
   try {
     const number = match[1];
     const result = `sfgo${number}-dev-gd|http://localhost:3001`;
@@ -360,29 +372,30 @@ bot.onText(/^\/sfgo(\d+)/i, async (msg, match) => {
 
 // ==================== CLEAR COMMAND ====================
 bot.onText(/^\/clear$/, async (msg) => {
+  deleteCommand(msg.chat.id, msg.message_id);
   try {
     const chatIdToClean = msg.chat.id;
 
-    if (!botMessages.has(chatIdToClean)) {
+    const messageIds = botMessages.get(chatIdToClean) || [];
+
+    // Check if there are no messages to delete
+    if (messageIds.length === 0) {
       return bot.sendMessage(chatIdToClean, "✅ No bot messages to delete in this chat.")
         .then(msg => trackMessage(msg.chat.id, msg.message_id))
         .catch(err => console.error("Error sending clear response:", err));
     }
 
-    const messageIds = botMessages.get(chatIdToClean) || [];
     let deletedCount = 0;
-    let failedCount = 0;
 
     // Send initial status message
     const statusMsg = await bot.sendMessage(chatIdToClean, "🗑️ *Deleting bot messages...*", { parse_mode: 'Markdown' });
 
-    // Delete all tracked messages
+    // Delete all bot messages
     for (const messageId of messageIds) {
       try {
         await bot.deleteMessage(chatIdToClean, messageId);
         deletedCount++;
       } catch (err) {
-        failedCount++;
         // Message might be too old or already deleted
       }
     }
@@ -391,14 +404,11 @@ bot.onText(/^\/clear$/, async (msg) => {
     botMessages.delete(chatIdToClean);
 
     // Update status message with result
-    const resultMessage = `✅ *Cleanup Complete*\n\n` +
-      `Deleted: ${deletedCount} messages\n` +
-      (failedCount > 0 ? `Failed: ${failedCount} messages (too old or already deleted)` : '');
+    const resultMessage = `✅ Deleted ${deletedCount} messages`;
 
     await bot.editMessageText(resultMessage, {
       chat_id: chatIdToClean,
-      message_id: statusMsg.message_id,
-      parse_mode: 'Markdown'
+      message_id: statusMsg.message_id
     });
 
     // Track the status message so it can be deleted next time
@@ -414,6 +424,7 @@ bot.onText(/^\/clear$/, async (msg) => {
 
 // ==================== HOLIDAY COMMAND ====================
 bot.onText(/^\/holiday$/, async (msg) => {
+  deleteCommand(msg.chat.id, msg.message_id);
   try {
     const today = getTodayHoliday();
     const tomorrow = getTomorrowHoliday();
