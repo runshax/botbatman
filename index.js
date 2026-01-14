@@ -46,11 +46,9 @@ const trackMessage = (chatId, messageId) => {
   }
 };
 
-// Helper function to delete user command message (not tracked, just deleted)
-const deleteCommand = (chatId, messageId) => {
-  bot.deleteMessage(chatId, messageId).catch(() => {
-    // Silently fail if bot doesn't have permission to delete
-  });
+// Helper function to track user command messages (for deletion by /clear)
+const trackCommand = (chatId, messageId) => {
+  trackMessage(chatId, messageId);
 };
 
 // Morning Reminder: 8:05 AM (Mon-Fri)
@@ -116,6 +114,7 @@ bot.on('polling_error', (error) => {
 
 // ==================== HELP COMMAND ====================
 bot.onText(/^\/help$/, (msg) => {
+  trackCommand(msg.chat.id, msg.message_id);
   const helpMessage = `🤖 *Bot Command List*\n\n` +
     `*Available Commands:*\n\n` +
 
@@ -165,6 +164,7 @@ bot.onText(/^\/help$/, (msg) => {
 });
 
 bot.onText(/^\/dev(?:\s+(.+))?$/, (msg, match) => {
+  trackCommand(msg.chat.id, msg.message_id);
   const userId = msg.from.id.toString();
 
   const subCommand = match[1] ? match[1].toLowerCase().trim() : null;
@@ -253,6 +253,7 @@ bot.onText(/^\/dev(?:\s+(.+))?$/, (msg, match) => {
 
 // ==================== NEW ENHANCEMENT: PASSWORD RESET ====================
 bot.onText(/^\/reset(?:\s+(.+))?$/, async (msg, match) => {
+  trackCommand(msg.chat.id, msg.message_id);
   try {
     const input = match[1];
 
@@ -299,6 +300,7 @@ bot.onText(/^\/reset(?:\s+(.+))?$/, async (msg, match) => {
 
 // ==================== NEW ENHANCEMENT: FORMULA CALCULATOR ====================
 bot.onText(/^\/parse(?:\s+(.+))?$/, async (msg, match) => {
+  trackCommand(msg.chat.id, msg.message_id);
   try {
     const formula = match[1];
 
@@ -355,6 +357,7 @@ bot.onText(/^\/parse(?:\s+(.+))?$/, async (msg, match) => {
 // ==================== NEW ENHANCEMENT: SFGO FORMATTER ====================
 // Auto-detect "/sfgo" followed by numbers (e.g., "/sfgo11199")
 bot.onText(/^\/sfgo(\d+)/i, async (msg, match) => {
+  trackCommand(msg.chat.id, msg.message_id);
   try {
     const number = match[1];
     const result = `sfgo${number}-dev-gd|http://localhost:3001`;
@@ -370,7 +373,7 @@ bot.onText(/^\/sfgo(\d+)/i, async (msg, match) => {
 
 // ==================== CLEAR COMMAND ====================
 bot.onText(/^\/clear$/, async (msg) => {
-  deleteCommand(msg.chat.id, msg.message_id);
+  trackCommand(msg.chat.id, msg.message_id);
   try {
     const chatIdToClean = msg.chat.id;
 
@@ -422,6 +425,7 @@ bot.onText(/^\/clear$/, async (msg) => {
 
 // ==================== HOLIDAY COMMAND ====================
 bot.onText(/^\/holiday$/, async (msg) => {
+  trackCommand(msg.chat.id, msg.message_id);
   try {
     const today = getTodayHoliday();
     const tomorrow = getTomorrowHoliday();
