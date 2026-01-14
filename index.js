@@ -116,7 +116,6 @@ bot.on('polling_error', (error) => {
 
 // ==================== HELP COMMAND ====================
 bot.onText(/^\/help$/, (msg) => {
-  deleteCommand(msg.chat.id, msg.message_id);
   const helpMessage = `🤖 *Bot Command List*\n\n` +
     `*Available Commands:*\n\n` +
 
@@ -166,7 +165,6 @@ bot.onText(/^\/help$/, (msg) => {
 });
 
 bot.onText(/^\/dev(?:\s+(.+))?$/, (msg, match) => {
-  deleteCommand(msg.chat.id, msg.message_id);
   const userId = msg.from.id.toString();
 
   const subCommand = match[1] ? match[1].toLowerCase().trim() : null;
@@ -177,12 +175,15 @@ bot.onText(/^\/dev(?:\s+(.+))?$/, (msg, match) => {
       return `${flag}: Not set`;
     }
 
-    // Split by "/" and trim each part
-    const parts = credString.split('/').map(p => p.trim());
+    // Split by " / " or " /" (flexible spacing) but not "//" in URLs
+    const parts = credString.split(/\s+\/\s*(?!\/)/);
 
     if (parts.length >= 3) {
-      // Return plain text format (no markdown) to avoid special char issues
-      return `${flag}\nUsername: ${parts[0]}\nPassword: ${parts[1]}\nSFGO: ${parts[2]}`;
+      // Join remaining parts in case SFGO contains more splits
+      const username = parts[0].trim();
+      const password = parts[1].trim();
+      const sfgo = parts.slice(2).join('/').trim();
+      return `${flag}\nUsername: ${username}\nPassword: ${password}\nSFGO: ${sfgo}`;
     }
 
     return `${flag}\n${credString}`;
@@ -194,12 +195,12 @@ bot.onText(/^\/dev(?:\s+(.+))?$/, (msg, match) => {
       return `${flag}: Not set`;
     }
 
-    // Split by "/" and trim each part
-    const parts = credString.split('/').map(p => p.trim());
+    // Split by " / " or " /" (flexible spacing) but not "//" in URLs
+    const parts = credString.split(/\s+\/\s*(?!\/)/);
 
     if (parts.length >= 3) {
-      // Extract only SFGO number (remove -dev-gd and URL)
-      const sfgoFull = parts[2];
+      // Get SFGO part (join remaining parts)
+      const sfgoFull = parts.slice(2).join('/').trim();
       const sfgoOnly = sfgoFull.split('|')[0]; // Get part before |
       const sfgoNumber = sfgoOnly.replace('-dev-gd', ''); // Remove -dev-gd
       return `${flag}\n${sfgoNumber}`;
@@ -252,7 +253,6 @@ bot.onText(/^\/dev(?:\s+(.+))?$/, (msg, match) => {
 
 // ==================== NEW ENHANCEMENT: PASSWORD RESET ====================
 bot.onText(/^\/reset(?:\s+(.+))?$/, async (msg, match) => {
-  deleteCommand(msg.chat.id, msg.message_id);
   try {
     const input = match[1];
 
@@ -299,7 +299,6 @@ bot.onText(/^\/reset(?:\s+(.+))?$/, async (msg, match) => {
 
 // ==================== NEW ENHANCEMENT: FORMULA CALCULATOR ====================
 bot.onText(/^\/parse(?:\s+(.+))?$/, async (msg, match) => {
-  deleteCommand(msg.chat.id, msg.message_id);
   try {
     const formula = match[1];
 
@@ -356,7 +355,6 @@ bot.onText(/^\/parse(?:\s+(.+))?$/, async (msg, match) => {
 // ==================== NEW ENHANCEMENT: SFGO FORMATTER ====================
 // Auto-detect "/sfgo" followed by numbers (e.g., "/sfgo11199")
 bot.onText(/^\/sfgo(\d+)/i, async (msg, match) => {
-  deleteCommand(msg.chat.id, msg.message_id);
   try {
     const number = match[1];
     const result = `sfgo${number}-dev-gd|http://localhost:3001`;
@@ -424,7 +422,6 @@ bot.onText(/^\/clear$/, async (msg) => {
 
 // ==================== HOLIDAY COMMAND ====================
 bot.onText(/^\/holiday$/, async (msg) => {
-  deleteCommand(msg.chat.id, msg.message_id);
   try {
     const today = getTodayHoliday();
     const tomorrow = getTomorrowHoliday();
