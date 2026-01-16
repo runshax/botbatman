@@ -3,22 +3,20 @@
 
 const holidays2026 = [
   { date: '2026-01-01', name: 'Tahun Baru Masehi', nameEn: 'New Year' },
-  { date: '2026-01-31', name: 'Tahun Baru Imlek 2577', nameEn: 'Chinese New Year' },
-  { date: '2026-03-22', name: 'Isra Mi\'raj Nabi Muhammad SAW', nameEn: 'Isra Mi\'raj' },
-  { date: '2026-03-23', name: 'Hari Suci Nyepi (Tahun Baru Saka 1948)', nameEn: 'Nyepi (Balinese New Year)' },
+  { date: '2026-01-16', name: 'Isra Mi\'raj Nabi Muhammad SAW', nameEn: 'Isra Mi\'raj' },
+  { date: '2026-02-17', name: 'Tahun Baru Imlek 2577', nameEn: 'Chinese New Year' },
+  { date: '2026-03-19', name: 'Hari Suci Nyepi (Tahun Baru Saka 1948)', nameEn: 'Nyepi (Balinese New Year)' },
+  { date: '2026-03-21', name: 'Hari Raya Idul Fitri 1447 H', nameEn: 'Eid al-Fitr' },
+  { date: '2026-03-22', name: 'Hari Raya Idul Fitri 1447 H', nameEn: 'Eid al-Fitr' },
   { date: '2026-04-03', name: 'Wafat Isa Al-Masih', nameEn: 'Good Friday' },
-  { date: '2026-04-05', name: 'Hari Paskah', nameEn: 'Easter Sunday' },
   { date: '2026-05-01', name: 'Hari Buruh Internasional', nameEn: 'Labor Day' },
-  { date: '2026-05-14', name: 'Kenaikan Isa Al-Masih', nameEn: 'Ascension Day' },
-  { date: '2026-05-24', name: 'Hari Raya Waisak 2570', nameEn: 'Vesak Day' },
+  { date: '2026-05-15', name: 'Kenaikan Isa Al-Masih', nameEn: 'Ascension Day' },
+  { date: '2026-05-28', name: 'Hari Raya Idul Adha 1447 H', nameEn: 'Eid al-Adha' },
   { date: '2026-06-01', name: 'Hari Lahir Pancasila', nameEn: 'Pancasila Day' },
-  { date: '2026-06-17', name: 'Hari Raya Idul Fitri 1447 H', nameEn: 'Eid al-Fitr' },
-  { date: '2026-06-18', name: 'Hari Raya Idul Fitri 1447 H', nameEn: 'Eid al-Fitr' },
+  { date: '2026-06-18', name: 'Tahun Baru Islam 1448 H', nameEn: 'Islamic New Year' },
   { date: '2026-08-17', name: 'Hari Kemerdekaan RI', nameEn: 'Independence Day' },
-  { date: '2026-08-24', name: 'Hari Raya Idul Adha 1447 H', nameEn: 'Eid al-Adha' },
-  { date: '2026-09-13', name: 'Tahun Baru Islam 1448 H', nameEn: 'Islamic New Year' },
-  { date: '2026-11-22', name: 'Maulid Nabi Muhammad SAW', nameEn: 'Mawlid' },
-  { date: '2026-12-25', name: 'Hari Raya Natal', nameEn: 'Christmas' }
+  { date: '2026-08-27', name: 'Maulid Nabi Muhammad SAW', nameEn: 'Mawlid' },
+  { date: '2026-12-24', name: 'Hari Raya Natal', nameEn: 'Christmas' }
 ];
 
 // You can add more years as needed
