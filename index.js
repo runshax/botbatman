@@ -130,14 +130,16 @@ bot.onText(/^\/help$/, (msg) => {
     `   Show all credentials (country list with SFGO)\n` +
     `   _Example:_ \`/dev\`\n\n` +
 
-    `3️⃣ */dev sfgoXXXX*\n` +
-    `   Show credential details by SFGO\n` +
-    `   _Example:_ \`/dev sfgo8879\`\n\n` +
+    `3️⃣ */dev sfgoXXXX* or */dev XXXX*\n` +
+    `   Show credential details by SFGO (with or without "sfgo" prefix)\n` +
+    `   _Examples:_ \`/dev sfgo8879\` or \`/dev 8879\`\n\n` +
 
     `4️⃣ */dev add*\n` +
-    `   Add new credential (URL auto-generated)\n` +
+    `   Add or update credential (URL auto-generated)\n` +
     `   _Format:_ \`/dev add country / username / password / sfgo\`\n` +
-    `   _Example:_ \`/dev add MY / champion / pass1234 / sfgo8879\`\n\n` +
+    `   _Example:_ \`/dev add MY / champion / pass1234 / sfgo8879\`\n` +
+    `   _Also works:_ \`/dev add MY/champion/pass1234/sfgo8879\`\n` +
+    `   _Note: If SFGO exists, it will be updated_\n\n` +
 
     `5️⃣ */dev delete*\n` +
     `   Delete credential by SFGO\n` +
@@ -185,12 +187,12 @@ bot.onText(/^\/dev(?:\s+(.+))?$/, async (msg, match) => {
   if (input && input.startsWith('add ')) {
     const credInput = input.substring(4).trim(); // Remove "add "
 
-    // Split by " / " to get parts
+    // Split by "/" with optional spaces around it
     const parts = credInput.split(/\s*\/\s*/);
 
     if (parts.length !== 4) {
       return bot.sendMessage(msg.chat.id,
-        "❌ *Format salah!*\n\n*Usage:*\n`/dev add country / username / password / sfgo`\n\n*Example:*\n`/dev add MY / champion / pass1234 / sfgo8879`",
+        `❌ *Format salah!*\n\n*Usage:*\n\`/dev add country / username / password / sfgo\`\n\n*Example:*\n\`/dev add MY / champion / pass1234 / sfgo8879\`\n\n*Or without spaces:*\n\`/dev add MY/champion/pass1234/sfgo8879\`\n\n_Found ${parts.length} parts, need 4_`,
         { parse_mode: 'Markdown' }
       )
         .then(m => trackMessage(m.chat.id, m.message_id))
@@ -202,14 +204,20 @@ bot.onText(/^\/dev(?:\s+(.+))?$/, async (msg, match) => {
     const password = parts[2].trim();
     const sfgo = parts[3].trim();
 
+    // Check if SFGO already exists
+    const existingCred = await getCredentialBySfgo(sfgo);
+    const isUpdate = existingCred !== null;
+
     // Auto-generate URL: sfgoXXXX-dev-gd|http://localhost:3001
     const url = `${sfgo}-dev-gd|http://localhost:3001`;
 
     const result = await addCredential(sfgo, country, username, password, url);
 
     if (result.success) {
+      const action = isUpdate ? 'updated' : 'saved';
+      const emoji = isUpdate ? '🔄' : '✅';
       return bot.sendMessage(msg.chat.id,
-        `✅ *Credential saved!*\n\nCountry: ${country}\nSFGO: ${sfgo}\nUsername: ${username}\nURL: ${url}\n\nUse \`/dev ${sfgo}\` to view`,
+        `${emoji} *Credential ${action}!*\n\nCountry: ${country}\nSFGO: ${sfgo}\nUsername: ${username}\nURL: ${url}\n\nUse \`/dev ${sfgo}\` to view`,
         { parse_mode: 'Markdown' }
       )
         .then(m => trackMessage(m.chat.id, m.message_id))
@@ -260,16 +268,23 @@ bot.onText(/^\/dev(?:\s+(.+))?$/, async (msg, match) => {
   let useMarkdown = true;
 
   if (subCommand) {
-    // Check if it's an SFGO lookup (starts with "sfgo")
-    if (subCommand.startsWith('sfgo')) {
-      const dbCred = await getCredentialBySfgo(subCommand);
+    // Check if it's an SFGO lookup (starts with "sfgo" or is just numbers)
+    let sfgoToSearch = subCommand;
+
+    // If it's just numbers, prepend "sfgo"
+    if (/^\d+$/.test(subCommand)) {
+      sfgoToSearch = 'sfgo' + subCommand;
+    }
+
+    if (subCommand.startsWith('sfgo') || /^\d+$/.test(subCommand)) {
+      const dbCred = await getCredentialBySfgo(sfgoToSearch);
 
       if (dbCred) {
         // Found in database
         response = `🔐 Dev Credential (${dbCred.country.toUpperCase()})\n\n🌐 ${dbCred.country.toUpperCase()}\nUsername: ${dbCred.username}\nPassword: ${dbCred.password}\nSFGO: ${dbCred.sfgo}\nURL: ${dbCred.url || 'N/A'}`;
         useMarkdown = false;
       } else {
-        response = `❌ *SFGO not found!*\n\nUse \`/dev add COUNTRY / username / password / ${subCommand}\` to add`;
+        response = `❌ *SFGO not found!*\n\nUse \`/dev add COUNTRY / username / password / ${sfgoToSearch}\` to add`;
       }
     } else {
       // Specific country requested - check database only
@@ -297,7 +312,7 @@ bot.onText(/^\/dev(?:\s+(.+))?$/, async (msg, match) => {
     if (allCreds.length > 0) {
       response = `🔐 *All Regional Credentials*\n---------------------------\n` +
         allCreds.join('\n---------------------------\n') +
-        `\n\n_Type "/dev sfgoXXXX" for full credentials._\n_Type "/dev add country / username / password / sfgo" to add._`;
+        `\n\n_Type "/dev XXXX" or "/dev sfgoXXXX" for full credentials._\n_Type "/dev add country / username / password / sfgo" to add._`;
     } else {
       response = `❌ *No credentials found!*\n\nUse \`/dev add COUNTRY / username / password / sfgoXXXX\` to add`;
     }
