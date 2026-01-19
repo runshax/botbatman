@@ -4,7 +4,11 @@ const express = require('express');
 const { encryptPassword } = require('./services/passwordEncryption');
 const { parseFormula, addCustomFunction } = require('./services/formulaParser');
 const { getTodayHoliday, getTomorrowHoliday, getUpcomingHolidays, formatDateIndonesian } = require('./services/indonesianHolidays');
+const { initDatabase, addCredential, getCredential, getCredentialBySfgo, getAllCredentials, deleteCredential } = require('./services/database');
 require('dotenv').config();
+
+// Initialize database on startup
+initDatabase();
 
 // Store message IDs for deletion
 const botMessages = new Map(); // chatId -> array of messageIds
@@ -122,19 +126,28 @@ bot.onText(/^\/help$/, (msg) => {
     `   Show this help message\n` +
     `   _Example:_ \`/help\`\n\n` +
 
-    `2️⃣ */dev [country]*\n` +
-    `   Show dev credentials for all countries or specific country\n` +
-    `   _Countries:_ my, id, th, vn, vn2, ph\n` +
-    `   _Examples:_\n` +
-    `   \`/dev\` - show all credentials\n` +
-    `   \`/dev my\` - show Malaysia only\n\n` +
+    `2️⃣ */dev*\n` +
+    `   Show all credentials (country list with SFGO)\n` +
+    `   _Example:_ \`/dev\`\n\n` +
 
-    `3️⃣ */reset username password*\n` +
+    `3️⃣ */dev sfgoXXXX*\n` +
+    `   Show credential details by SFGO\n` +
+    `   _Example:_ \`/dev sfgo8879\`\n\n` +
+
+    `4️⃣ */dev add*\n` +
+    `   Add new credential (URL auto-generated)\n` +
+    `   _Format:_ \`/dev add country / username / password / sfgo\`\n` +
+    `   _Example:_ \`/dev add MY / champion / pass1234 / sfgo8879\`\n\n` +
+
+    `5️⃣ */dev delete*\n` +
+    `   Delete credential by SFGO\n` +
+    `   _Example:_ \`/dev delete sfgo8879\`\n\n` +
+
+    `6️⃣ */reset username password*\n` +
     `   Generate encrypted password hash for database\n` +
-    `   _Example:_\n` +
-    `   \`/reset email@gmail.com pass1234\`\n\n` +
+    `   _Example:_ \`/reset email@gmail.com pass1234\`\n\n` +
 
-    `4️⃣ */parse formula*\n` +
+    `7️⃣ */parse formula*\n` +
     `   Calculate mathematical formulas and functions\n` +
     `   _Examples:_\n` +
     `   \`/parse 1+1\`\n` +
@@ -142,19 +155,18 @@ bot.onText(/^\/help$/, (msg) => {
     `   \`/parse ROUND(3.14159, 2)\`\n` +
     `   \`/parse MAX(100,50,75)\`\n\n` +
 
-    `5️⃣ */clear*\n` +
+    `8️⃣ */clear*\n` +
     `   Delete all bot messages in this chat\n` +
     `   _Example:_ \`/clear\`\n\n` +
 
-    `6️⃣ */holiday*\n` +
+    `9️⃣ */holiday*\n` +
     `   Check Indonesian public holidays\n` +
     `   _Example:_ \`/holiday\`\n\n` +
 
-    `7️⃣ */sfgo[number]*\n` +
+    `🔟 */sfgo[number]*\n` +
     `   Auto-format SFGO numbers\n` +
-    `   _Example:_\n` +
-    `   \`/sfgo11199\`\n` +
-    `   Result: \`sfgo11199-dev-gd|http://localhost:3001\`\n\n` +
+    `   _Example:_ \`/sfgo11199\`\n` +
+    `   _Result:_ \`sfgo11199-dev-gd|http://localhost:3001\`\n\n` +
 
     `💡 _Tip: Type any command without parameters to see usage examples!_`;
 
@@ -163,86 +175,132 @@ bot.onText(/^\/help$/, (msg) => {
     .catch(err => console.error("Error sending help message:", err));
 });
 
-bot.onText(/^\/dev(?:\s+(.+))?$/, (msg, match) => {
+bot.onText(/^\/dev(?:\s+(.+))?$/, async (msg, match) => {
   trackCommand(msg.chat.id, msg.message_id);
   const userId = msg.from.id.toString();
 
-  const subCommand = match[1] ? match[1].toLowerCase().trim() : null;
+  const input = match[1] ? match[1].trim() : null;
 
-  // Function to format credentials with full details (for specific country)
-  const formatCredFull = (credString, flag) => {
-    if (!credString || credString.includes("Not set")) {
-      return `${flag}: Not set`;
+  // Parse command: /dev add country / username / password / sfgo
+  if (input && input.startsWith('add ')) {
+    const credInput = input.substring(4).trim(); // Remove "add "
+
+    // Split by " / " to get parts
+    const parts = credInput.split(/\s*\/\s*/);
+
+    if (parts.length !== 4) {
+      return bot.sendMessage(msg.chat.id,
+        "❌ *Format salah!*\n\n*Usage:*\n`/dev add country / username / password / sfgo`\n\n*Example:*\n`/dev add MY / champion / pass1234 / sfgo8879`",
+        { parse_mode: 'Markdown' }
+      )
+        .then(m => trackMessage(m.chat.id, m.message_id))
+        .catch(err => console.error("Error:", err));
     }
 
-    // Split by " / " or " /" (flexible spacing) but not "//" in URLs
-    const parts = credString.split(/\s+\/\s*(?!\/)/);
+    const country = parts[0].trim();
+    const username = parts[1].trim();
+    const password = parts[2].trim();
+    const sfgo = parts[3].trim();
 
-    if (parts.length >= 3) {
-      // Join remaining parts in case SFGO contains more splits
-      const username = parts[0].trim();
-      const password = parts[1].trim();
-      const sfgo = parts.slice(2).join('/').trim();
-      return `${flag}\nUsername: ${username}\nPassword: ${password}\nSFGO: ${sfgo}`;
+    // Auto-generate URL: sfgoXXXX-dev-gd|http://localhost:3001
+    const url = `${sfgo}-dev-gd|http://localhost:3001`;
+
+    const result = await addCredential(sfgo, country, username, password, url);
+
+    if (result.success) {
+      return bot.sendMessage(msg.chat.id,
+        `✅ *Credential saved!*\n\nCountry: ${country}\nSFGO: ${sfgo}\nUsername: ${username}\nURL: ${url}\n\nUse \`/dev ${sfgo}\` to view`,
+        { parse_mode: 'Markdown' }
+      )
+        .then(m => trackMessage(m.chat.id, m.message_id))
+        .catch(err => console.error("Error:", err));
+    } else {
+      return bot.sendMessage(msg.chat.id,
+        `❌ *Error saving credential:* ${result.error}`,
+        { parse_mode: 'Markdown' }
+      )
+        .then(m => trackMessage(m.chat.id, m.message_id))
+        .catch(err => console.error("Error:", err));
     }
+  }
 
-    return `${flag}\n${credString}`;
-  };
+  // Parse command: /dev delete sfgoXXXX
+  if (input && input.startsWith('delete ')) {
+    const sfgo = input.substring(7).trim();
 
-  // Function to format credentials - only show SFGO (for all countries list)
-  const formatCredShort = (credString, flag) => {
-    if (!credString || credString.includes("Not set")) {
-      return `${flag}: Not set`;
+    const result = await deleteCredential(sfgo);
+
+    if (result.success && result.deleted) {
+      return bot.sendMessage(msg.chat.id,
+        `✅ *Credential deleted!*\n\nSFGO: ${sfgo}`,
+        { parse_mode: 'Markdown' }
+      )
+        .then(m => trackMessage(m.chat.id, m.message_id))
+        .catch(err => console.error("Error:", err));
+    } else if (result.success && !result.deleted) {
+      return bot.sendMessage(msg.chat.id,
+        `❌ *Credential not found!*\n\nSFGO: ${sfgo}`,
+        { parse_mode: 'Markdown' }
+      )
+        .then(m => trackMessage(m.chat.id, m.message_id))
+        .catch(err => console.error("Error:", err));
+    } else {
+      return bot.sendMessage(msg.chat.id,
+        `❌ *Error deleting credential:* ${result.error}`,
+        { parse_mode: 'Markdown' }
+      )
+        .then(m => trackMessage(m.chat.id, m.message_id))
+        .catch(err => console.error("Error:", err));
     }
+  }
 
-    // Split by " / " or " /" (flexible spacing) but not "//" in URLs
-    const parts = credString.split(/\s+\/\s*(?!\/)/);
-
-    if (parts.length >= 3) {
-      // Get SFGO part (join remaining parts)
-      const sfgoFull = parts.slice(2).join('/').trim();
-      const sfgoOnly = sfgoFull.split('|')[0]; // Get part before |
-      const sfgoNumber = sfgoOnly.replace('-dev-gd', ''); // Remove -dev-gd
-      return `${flag}\n${sfgoNumber}`;
-    }
-
-    return `${flag}\n${credString}`;
-  };
+  const subCommand = input ? input.toLowerCase().trim() : null;
 
   let response = "";
   let useMarkdown = true;
 
   if (subCommand) {
-    // Specific country requested - show full credentials
-    const credsFull = {
-      my: formatCredFull(process.env.DEVMY, "🇲🇾 MY"),
-      id: formatCredFull(process.env.DEVID, "🇮🇩 ID"),
-      th: formatCredFull(process.env.DEVTH, "🇹🇭 TH"),
-      vn: formatCredFull(process.env.DEVVN, "🇻🇳 VN"),
-      vn2: formatCredFull(process.env.DEVVN2, "🇻🇳 VN2"),
-      ph: formatCredFull(process.env.DEVPH, "🇵🇭 PH")
-    };
+    // Check if it's an SFGO lookup (starts with "sfgo")
+    if (subCommand.startsWith('sfgo')) {
+      const dbCred = await getCredentialBySfgo(subCommand);
 
-    if (credsFull[subCommand]) {
-      response = `🔐 Dev Credential (${subCommand.toUpperCase()})\n\n${credsFull[subCommand]}`;
-      useMarkdown = false; // No markdown to avoid special char issues
+      if (dbCred) {
+        // Found in database
+        response = `🔐 Dev Credential (${dbCred.country.toUpperCase()})\n\n🌐 ${dbCred.country.toUpperCase()}\nUsername: ${dbCred.username}\nPassword: ${dbCred.password}\nSFGO: ${dbCred.sfgo}\nURL: ${dbCred.url || 'N/A'}`;
+        useMarkdown = false;
+      } else {
+        response = `❌ *SFGO not found!*\n\nUse \`/dev add COUNTRY / username / password / ${subCommand}\` to add`;
+      }
     } else {
-      response = `❌ *Country not found!*\n\nAvailable: my, id, th, vn, vn2, ph`;
+      // Specific country requested - check database only
+      const dbCred = await getCredential(subCommand);
+
+      if (dbCred) {
+        // Found in database
+        response = `🔐 Dev Credential (${subCommand.toUpperCase()})\n\n🌐 ${subCommand.toUpperCase()}\nUsername: ${dbCred.username}\nPassword: ${dbCred.password}\nSFGO: ${dbCred.sfgo}\nURL: ${dbCred.url || 'N/A'}`;
+        useMarkdown = false;
+      } else {
+        response = `❌ *Country not found!*\n\nUse \`/dev add ${subCommand.toUpperCase()} / username / password / sfgoXXXX\` to add`;
+      }
     }
   } else {
-    // No country specified - show only SFGO for all
-    const credsShort = {
-      my: formatCredShort(process.env.DEVMY, "🇲🇾 MY"),
-      id: formatCredShort(process.env.DEVID, "🇮🇩 ID"),
-      th: formatCredShort(process.env.DEVTH, "🇹🇭 TH"),
-      vn: formatCredShort(process.env.DEVVN, "🇻🇳 VN"),
-      vn2: formatCredShort(process.env.DEVVN2, "🇻🇳 VN2"),
-      ph: formatCredShort(process.env.DEVPH, "🇵🇭 PH")
-    };
+    // No country specified - show all from database only
+    const dbCreds = await getAllCredentials();
+    const allCreds = [];
 
-    response = `🔐 *All Regional Credentials*\n---------------------------\n` +
-      Object.values(credsShort).join('\n---------------------------\n') +
-      `\n\n_Type "/dev my" for full credentials._`;
+    // Add database credentials
+    for (const cred of dbCreds) {
+      const sfgoOnly = cred.sfgo.split('|')[0].replace('-dev-gd', '');
+      allCreds.push(`🌐 ${cred.country.toUpperCase()}\n${sfgoOnly}`);
+    }
+
+    if (allCreds.length > 0) {
+      response = `🔐 *All Regional Credentials*\n---------------------------\n` +
+        allCreds.join('\n---------------------------\n') +
+        `\n\n_Type "/dev sfgoXXXX" for full credentials._\n_Type "/dev add country / username / password / sfgo" to add._`;
+    } else {
+      response = `❌ *No credentials found!*\n\nUse \`/dev add COUNTRY / username / password / sfgoXXXX\` to add`;
+    }
   }
 
   const options = useMarkdown ? { parse_mode: 'Markdown' } : {};
