@@ -198,7 +198,7 @@ bot.onText(/^\/dev(?:\s+(.+))?$/, async (msg, match) => {
         `❌ *Format salah!*\n\n*Usage:*\n\`/dev add country / username / password / sfgo\`\n\n*Example:*\n\`/dev add MY / champion / pass1234 / sfgo8879\`\n\n*Or without spaces:*\n\`/dev add MY/champion/pass1234/sfgo8879\`\n\n_Found ${parts.length} parts, need 4_`,
         { parse_mode: 'Markdown' }
       )
-        // Don't track /dev messages
+        .then(m => trackMessage(m.chat.id, m.message_id))
         .catch(err => console.error("Error:", err));
     }
 
@@ -223,14 +223,14 @@ bot.onText(/^\/dev(?:\s+(.+))?$/, async (msg, match) => {
         `${emoji} *Credential ${action}!*\n\nCountry: ${country}\nSFGO: ${sfgo}\nUsername: ${username}\nURL: ${url}\n\nUse \`/dev ${sfgo}\` to view`,
         { parse_mode: 'Markdown' }
       )
-        // Don't track /dev messages
+        .then(m => trackMessage(m.chat.id, m.message_id))
         .catch(err => console.error("Error:", err));
     } else {
       return bot.sendMessage(msg.chat.id,
         `❌ *Error saving credential:* ${result.error}`,
         { parse_mode: 'Markdown' }
       )
-        // Don't track /dev messages
+        .then(m => trackMessage(m.chat.id, m.message_id))
         .catch(err => console.error("Error:", err));
     }
   }
@@ -246,21 +246,21 @@ bot.onText(/^\/dev(?:\s+(.+))?$/, async (msg, match) => {
         `✅ *Credential deleted!*\n\nSFGO: ${sfgo}`,
         { parse_mode: 'Markdown' }
       )
-        // Don't track /dev messages
+        .then(m => trackMessage(m.chat.id, m.message_id))
         .catch(err => console.error("Error:", err));
     } else if (result.success && !result.deleted) {
       return bot.sendMessage(msg.chat.id,
         `❌ *Credential not found!*\n\nSFGO: ${sfgo}`,
         { parse_mode: 'Markdown' }
       )
-        // Don't track /dev messages
+        .then(m => trackMessage(m.chat.id, m.message_id))
         .catch(err => console.error("Error:", err));
     } else {
       return bot.sendMessage(msg.chat.id,
         `❌ *Error deleting credential:* ${result.error}`,
         { parse_mode: 'Markdown' }
       )
-        // Don't track /dev messages
+        .then(m => trackMessage(m.chat.id, m.message_id))
         .catch(err => console.error("Error:", err));
     }
   }
@@ -338,7 +338,7 @@ bot.onText(/^\/reset(?:\s+(.+))?$/, async (msg, match) => {
         "❌ *Format salah!*\n\n*Usage:*\n`/reset username password`\n\n*Example:*\n`/reset email@gmail.com pass1234`",
         { parse_mode: 'Markdown' }
       )
-        // Don't track /dev messages
+        .then(m => trackMessage(m.chat.id, m.message_id))
         .catch(err => console.error("Error sending reset help:", err));
     }
 
@@ -349,7 +349,7 @@ bot.onText(/^\/reset(?:\s+(.+))?$/, async (msg, match) => {
         "❌ *Format salah!*\n\nHarus ada 2 parameter: username dan password\n\n*Example:*\n`/reset email@gmail.com pass1234`",
         { parse_mode: 'Markdown' }
       )
-        // Don't track /dev messages
+        .then(m => trackMessage(m.chat.id, m.message_id))
         .catch(err => console.error("Error sending reset error:", err));
     }
 
@@ -357,19 +357,19 @@ bot.onText(/^\/reset(?:\s+(.+))?$/, async (msg, match) => {
     const uuid = process.env.DEFAULT_UUID || 'reset';
 
     bot.sendMessage(msg.chat.id, "⏳ *Processing...*\nGenerating encrypted password hash...", { parse_mode: 'Markdown' })
-      // Don't track /dev messages
+      .then(msg => trackMessage(msg.chat.id, msg.message_id))
       .catch(err => console.error("Error sending processing message:", err));
 
     const result = await encryptPassword(username, password, uuid);
 
     bot.sendMessage(msg.chat.id, `\`\`\`\n${result.message}\n\`\`\``, { parse_mode: 'Markdown' })
-      // Don't track /dev messages
+      .then(msg => trackMessage(msg.chat.id, msg.message_id))
       .catch(err => console.error("Error sending reset result:", err));
 
   } catch (err) {
     console.error("Error in /reset command:", err);
     bot.sendMessage(msg.chat.id, "❌ *Error!*\nSomething went wrong while processing your request.", { parse_mode: 'Markdown' })
-      // Don't track /dev messages
+      .then(msg => trackMessage(msg.chat.id, msg.message_id))
       .catch(err => console.error("Error sending error message:", err));
   }
 });
@@ -394,7 +394,7 @@ bot.onText(/^\/parse(?:\s+(.+))?$/, async (msg, match) => {
         "`/parse TRIPLE(10)` - multiply by 3",
         { parse_mode: 'Markdown' }
       )
-        // Don't track /dev messages
+        .then(m => trackMessage(m.chat.id, m.message_id))
         .catch(err => console.error("Error sending parse help:", err));
     }
 
@@ -408,7 +408,7 @@ bot.onText(/^\/parse(?:\s+(.+))?$/, async (msg, match) => {
         `Formula: \`${formula}\``,
         { parse_mode: 'Markdown' }
       )
-        // Don't track /dev messages
+        .then(m => trackMessage(m.chat.id, m.message_id))
         .catch(err => console.error("Error sending parse result:", err));
     } else {
       // Error - show error message
@@ -418,14 +418,14 @@ bot.onText(/^\/parse(?:\s+(.+))?$/, async (msg, match) => {
         `*Error:* ${result.error}`,
         { parse_mode: 'Markdown' }
       )
-        // Don't track /dev messages
+        .then(m => trackMessage(m.chat.id, m.message_id))
         .catch(err => console.error("Error sending parse error:", err));
     }
 
   } catch (err) {
     console.error("Error in /parse command:", err);
     bot.sendMessage(msg.chat.id, "❌ *Error!*\nSomething went wrong while processing your formula.", { parse_mode: 'Markdown' })
-      // Don't track /dev messages
+      .then(msg => trackMessage(msg.chat.id, msg.message_id))
       .catch(err => console.error("Error sending error message:", err));
   }
 });
@@ -439,7 +439,7 @@ bot.onText(/^\/sfgo(\d+)/i, async (msg, match) => {
     const result = `sfgo${number}-dev-gd|http://localhost:3001`;
 
     bot.sendMessage(msg.chat.id, result)
-      // Don't track /dev messages
+      .then(msg => trackMessage(msg.chat.id, msg.message_id))
       .catch(err => console.error("Error sending sfgo result:", err));
 
   } catch (err) {
@@ -458,7 +458,7 @@ bot.onText(/^\/clear$/, async (msg) => {
     // Check if there are no messages to delete
     if (messageIds.length === 0) {
       return bot.sendMessage(chatIdToClean, "✅ No bot messages to delete in this chat.")
-        // Don't track /dev messages
+        .then(m => trackMessage(m.chat.id, m.message_id))
         .catch(err => console.error("Error sending clear response:", err));
     }
 
@@ -493,7 +493,7 @@ bot.onText(/^\/clear$/, async (msg) => {
   } catch (err) {
     console.error("Error in /clear command:", err);
     bot.sendMessage(msg.chat.id, "❌ *Error!*\nSomething went wrong while clearing messages.", { parse_mode: 'Markdown' })
-      // Don't track /dev messages
+      .then(msg => trackMessage(msg.chat.id, msg.message_id))
       .catch(err => console.error("Error sending error message:", err));
   }
 });
@@ -529,13 +529,13 @@ bot.onText(/^\/holiday$/, async (msg) => {
     }
 
     bot.sendMessage(msg.chat.id, message, { parse_mode: 'Markdown' })
-      // Don't track /dev messages
+      .then(msg => trackMessage(msg.chat.id, msg.message_id))
       .catch(err => console.error("Error sending holiday info:", err));
 
   } catch (err) {
     console.error("Error in /holiday command:", err);
     bot.sendMessage(msg.chat.id, "❌ *Error!*\nSomething went wrong while fetching holiday information.", { parse_mode: 'Markdown' })
-      // Don't track /dev messages
+      .then(msg => trackMessage(msg.chat.id, msg.message_id))
       .catch(err => console.error("Error sending error message:", err));
   }
 });
