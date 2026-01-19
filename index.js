@@ -178,7 +178,10 @@ bot.onText(/^\/help$/, (msg) => {
 });
 
 bot.onText(/^\/dev(?:\s+(.+))?$/, async (msg, match) => {
-  // Don't track /dev commands - they should persist
+  // Only track if it's not a forwarded message with URL (containing ://)
+  if (!msg.text.includes('://')) {
+    trackCommand(msg.chat.id, msg.message_id);
+  }
   const userId = msg.from.id.toString();
 
   const input = match[1] ? match[1].trim() : null;
