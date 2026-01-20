@@ -89,25 +89,25 @@ Description: Calculate 12% and round to 2 decimal places
 ---
 
 ---
-keyword: "@COMPONENT_CODE"
+keyword: "COMPONENT_CODE"
 aliases:
-  - "@CODE"
-  - "Cross-Component Reference"
+  - "Component Codes"
+  - "AL_001, SALARY, BONUS, etc."
 category: PAYFORM
-subcategory: Special Keywords
+subcategory: Component References
 data_type: DYNAMIC
-syntax: "@COMPONENT_CODE"
-description: References another component's value in formulas (cross-component reference)
+syntax: "COMPONENT_CODE or @COMPONENT_CODE"
+description: Your custom codes (AL_001, SALARY). Direct use gets formula, @CODE gets calculated result. Example: SALARY=BASE*2, BASE=10, then SALARY formula is BASE*2 but @SALARY=20
 module: PAYROLL
 taxcountry: null
 examples:
-  - "@SALARY * 0.10"
-  - "(@SALARY + @BONUS) * 0.12"
-  - "IF(@SALARY > 10000, @SALARY * 0.15, @SALARY * 0.10)"
+  - "SALARY (uses formula BASE*2)"
+  - "@SALARY (gets result 20)"
+  - "AL_001 = @SALARY + @BONUS"
+  - "TAX = @SALARY * 0.10"
 related_keywords:
   - "BASE"
   - "COMPONENT_CODE_RESULT"
-  - "processOrder"
 ---
 
 ## @COMPONENT_CODE
@@ -4447,86 +4447,6 @@ Description: Bonus for customer-facing departments
 
 # Component Codes (Dynamic)
 
----
-keyword: "COMPONENT_CODES"
-aliases:
-  - "User-Defined Components"
-  - "SALARY, BONUS, ALLOWANCE, etc."
-category: PAYFORM
-subcategory: Dynamic Component Codes
-data_type: DYNAMIC
-syntax: "COMPONENT_CODE"
-description: Your custom component codes (AL_001, SALARY, etc). Use @CODE in formulas to get calculated result. Example: SALARY=BASE*2, if BASE=10 then @SALARY=20
-module: PAYROLL
-taxcountry: null
-examples:
-  - "AL_001 = SALARY (gets SALARY result)"
-  - "@SALARY (gets calculated value, e.g., 20)"
-  - "AL_002 = @SALARY + @BONUS"
-  - "OVERTIME_PAY"
-  - "TAX"
-  - "DEDUCTION_INSURANCE"
-related_keywords:
-  - "BASE"
-  - "@COMPONENT_CODE"
-  - "COMPONENT_CODE_RESULT"
----
-
-## COMPONENT_CODES (Dynamic)
-
-### Description
-Component codes are user-defined allowance and deduction codes created in the Pay Component Master (`tpympayallowdeduct` table). These codes automatically become valid formula keywords and can be referenced in formulas.
-
-### How It Works
-1. **Creation**: User creates a component in the system (e.g., "SALARY", "BONUS", "TAX")
-2. **Auto-Sync**: System automatically adds the code to `tsfmreserveword` table with category `COMPCODE`
-3. **Formula Usage**: Component code can now be used in formulas
-
-### Syntax
-```
-COMPONENT_CODE
-```
-
-### Common Component Codes
-- `SALARY` - Base salary
-- `BONUS` - Performance bonus
-- `OVERTIME_PAY` - Overtime payment
-- `ALLOWANCE_*` - Various allowances (housing, transport, meal, etc.)
-- `TAX` - Income tax
-- `DEDUCTION_*` - Various deductions (insurance, loan, etc.)
-
-### Usage in Formulas
-
-**Direct Reference:**
-```
-Formula: SALARY + BONUS
-Description: Add salary and bonus components
-```
-
-**With @ Prefix (Cross-Component):**
-```
-Formula: @SALARY * 0.10
-Description: Reference SALARY component from another component (e.g., TAX)
-```
-
-**With _RESULT Suffix:**
-```
-Formula: SALARY_RESULT + BONUS_RESULT
-Description: Use calculated results of SALARY and BONUS
-```
-
-### Important Notes
-- Component codes are **company-specific** (each company can have different codes)
-- Component codes are **case-sensitive** (use exact code as defined)
-- Component codes must be **unique** within a company
-- System automatically syncs codes when components are created/modified
-
-### Related Keywords
-- `BASE` - Current component reference
-- `@COMPONENT_CODE` - Cross-component reference
-- `COMPONENT_CODE_RESULT` - Result reference
-
----
 
 # Pay Variables
 
