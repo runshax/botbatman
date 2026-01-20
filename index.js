@@ -102,6 +102,7 @@ const parseKeywordsFromMarkdown = () => {
       let inYaml = true;
       let description = '';
       let examples = [];
+      let yamlExamples = [];
       let captureExamples = false;
       let currentSection = '';
 
@@ -120,10 +121,13 @@ const parseKeywordsFromMarkdown = () => {
             currentSection = 'aliases';
           } else if (line.startsWith('examples:')) {
             currentSection = 'yaml_examples';
+            yamlExamples = [];
           } else if (line.startsWith('related_keywords:')) {
             currentSection = 'related';
           } else if (line.startsWith('  - ') && currentSection === 'aliases') {
             keyword.aliases.push(line.replace('  - ', '').trim().replace(/['"]/g, ''));
+          } else if (line.startsWith('  - ') && currentSection === 'yaml_examples') {
+            yamlExamples.push(line.replace('  - ', '').trim().replace(/['"]/g, ''));
           } else if (line.startsWith('category:')) {
             keyword.category = line.replace('category:', '').trim();
             currentSection = 'category';
@@ -169,6 +173,10 @@ const parseKeywordsFromMarkdown = () => {
 
       if (examples.length > 0) {
         keyword.examples = examples;
+      }
+
+      if (yamlExamples.length > 0) {
+        keyword.yamlExamples = yamlExamples;
       }
 
       if (keyword.name) {
@@ -674,10 +682,14 @@ bot.onText(/^\/ask(?:\s+(.+))?$/, async (msg, match) => {
         const shortDesc = kw.description.length > 80
           ? kw.description.substring(0, 80) + '...'
           : kw.description;
-        response += `${shortDesc}\n\n`;
-      } else {
-        response += `\n`;
+        response += `${shortDesc}\n`;
       }
+
+      // Add first YAML example if available
+      if (kw.yamlExamples && kw.yamlExamples.length > 0) {
+        response += `_Example:_ \`${kw.yamlExamples[0]}\`\n`;
+      }
+      response += `\n`;
 
       // Check if response is getting too long (Telegram limit ~4096 chars)
       if (response.length > 3500) {
