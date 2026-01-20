@@ -353,29 +353,23 @@ bot.onText(/^\/help$/, (msg) => {
     `   \`/parse IF(GRADE="01",7500000,0) | GRADE='01'\`\n` +
     `   \`/parse SALARY*0.7 | SALARY=10000000\`\n\n` +
 
-    `8️⃣ */keywords*\n` +
-    `   List all available formula keywords by category\n` +
+    `8️⃣ */ask*\n` +
+    `   Browse formula documentation by category or keyword\n` +
     `   _Examples:_\n` +
-    `   \`/keywords\` - Show all categories\n` +
-    `   \`/keywords PAYFORM\` - Show payroll keywords\n` +
-    `   \`/keywords EMPFORM\` - Show employee keywords\n\n` +
+    `   \`/ask\` - Show all categories\n` +
+    `   \`/ask PAYFORM\` - List payroll keywords\n` +
+    `   \`/ask BASE\` - Get BASE keyword details\n` +
+    `   \`/ask JOINDATE\` - Employee join date info\n\n` +
 
-    `9️⃣ */ask keyword*\n` +
-    `   Search payroll formula documentation\n` +
-    `   _Examples:_\n` +
-    `   \`/ask BASE\` - Get info about BASE keyword\n` +
-    `   \`/ask JOINDATE\` - Employee join date\n` +
-    `   \`/ask OTRD_FULL\` - Overtime calculations\n\n` +
-
-    `🔟 */clear*\n` +
+    `9️⃣ */clear*\n` +
     `   Delete all bot messages in this chat\n` +
     `   _Example:_ \`/clear\`\n\n` +
 
-    `1️⃣1️⃣ */holiday*\n` +
+    `🔟 */holiday*\n` +
     `   Check Indonesian public holidays\n` +
     `   _Example:_ \`/holiday\`\n\n` +
 
-    `1️⃣2️⃣ */sfgo[number]*\n` +
+    `1️⃣1️⃣ */sfgo[number]*\n` +
     `   Auto-format SFGO numbers\n` +
     `   _Example:_ \`/sfgo11199\`\n` +
     `   _Result:_ \`sfgo11199-dev-gd|http://localhost:3001\`\n\n` +
@@ -589,31 +583,93 @@ bot.onText(/^\/ask(?:\s+(.+))?$/, async (msg, match) => {
   trackCommand(msg.chat.id, msg.message_id);
 
   const query = match[1];
+  const keywords = parseKeywordsFromMarkdown();
 
+  // No parameter - show all categories
   if (!query) {
-    return bot.sendMessage(msg.chat.id,
-      "❓ *Ask about formula keywords*\n\n" +
-      "*Usage:*\n`/ask KEYWORD`\n\n" +
-      "*Examples:*\n" +
-      "`/ask BASE`\n" +
-      "`/ask JOINDATE`\n" +
-      "`/ask OTRD_FULL`\n" +
-      "`/ask @COMPONENT_CODE`",
-      { parse_mode: 'Markdown' }
-    );
+    const categorized = {};
+    keywords.forEach(kw => {
+      const cat = kw.category || 'UNCATEGORIZED';
+      if (!categorized[cat]) {
+        categorized[cat] = [];
+      }
+      categorized[cat].push(kw.name);
+    });
+
+    let response = `📚 *Formula Keywords*\n\n`;
+    response += `Total: ${keywords.length} keywords\n\n`;
+
+    const sortedCategories = Object.keys(categorized).sort();
+    for (const cat of sortedCategories) {
+      response += `*${cat}* (${categorized[cat].length})\n`;
+    }
+
+    response += `\n*Usage:*\n`;
+    response += `• \`/ask\` - Show all categories\n`;
+    response += `• \`/ask CATEGORY\` - List keywords in category\n`;
+    response += `• \`/ask KEYWORD\` - Get keyword details\n\n`;
+    response += `*Examples:*\n`;
+    response += `\`/ask PAYFORM\` - Show payroll keywords\n`;
+    response += `\`/ask BASE\` - Get BASE keyword info`;
+
+    return bot.sendMessage(msg.chat.id, response, { parse_mode: 'Markdown' })
+      .then(m => trackMessage(m.chat.id, m.message_id))
+      .catch(err => console.error("Error sending categories:", err));
   }
 
+  // Check if query is a category
+  const categorized = {};
+  keywords.forEach(kw => {
+    const cat = kw.category || 'UNCATEGORIZED';
+    if (!categorized[cat]) {
+      categorized[cat] = [];
+    }
+    categorized[cat].push(kw.name);
+  });
+
+  const queryUpper = query.toUpperCase().trim();
+  const matchedCategory = Object.keys(categorized).find(cat =>
+    cat.toUpperCase() === queryUpper || cat.toUpperCase().includes(queryUpper)
+  );
+
+  // If it's a category, list keywords in that category
+  if (matchedCategory) {
+    const kwList = categorized[matchedCategory].sort();
+    let response = `📚 *${matchedCategory}* (${kwList.length} keywords)\n\n`;
+
+    const chunkSize = 30;
+    for (let i = 0; i < kwList.length; i += chunkSize) {
+      const chunk = kwList.slice(i, i + chunkSize);
+      response += chunk.map(kw => `• \`${kw}\``).join('\n') + '\n';
+
+      if (i + chunkSize < kwList.length) {
+        response += `\n_...continued in next message_\n`;
+        bot.sendMessage(msg.chat.id, response, { parse_mode: 'Markdown' })
+          .then(m => trackMessage(m.chat.id, m.message_id));
+        response = `📚 *${matchedCategory}* (continued)\n\n`;
+      }
+    }
+
+    response += `\n💡 _Use_ \`/ask KEYWORD\` _to learn more_`;
+    return bot.sendMessage(msg.chat.id, response, { parse_mode: 'Markdown' })
+      .then(m => trackMessage(m.chat.id, m.message_id))
+      .catch(err => console.error("Error sending category list:", err));
+  }
+
+  // Otherwise, search for keyword
   const keyword = searchKeyword(query);
 
   if (!keyword) {
     return bot.sendMessage(msg.chat.id,
-      `❌ Keyword "${query}" not found.\n\n` +
+      `❌ "${query}" not found.\n\n` +
       "Try:\n" +
-      "• Check spelling\n" +
-      "• Use uppercase (e.g., BASE, JOINDATE)\n" +
-      "• Try `/ask` without parameters to see usage",
+      "• \`/ask\` to see all categories\n" +
+      "• \`/ask PAYFORM\` to list keywords\n" +
+      "• Check keyword spelling",
       { parse_mode: 'Markdown' }
-    );
+    )
+      .then(m => trackMessage(m.chat.id, m.message_id))
+      .catch(err => console.error("Error:", err));
   }
 
   // Build response
@@ -668,85 +724,6 @@ bot.onText(/^\/ask(?:\s+(.+))?$/, async (msg, match) => {
     });
 });
 
-// ==================== KEYWORDS LIST COMMAND ====================
-bot.onText(/^\/keywords(?:\s+(.+))?$/, async (msg, match) => {
-  trackCommand(msg.chat.id, msg.message_id);
-
-  const category = match[1] ? match[1].toUpperCase().trim() : null;
-
-  const keywords = parseKeywordsFromMarkdown();
-
-  if (keywords.length === 0) {
-    return bot.sendMessage(msg.chat.id, "❌ No keywords found in documentation.");
-  }
-
-  // Group keywords by category
-  const categorized = {};
-  keywords.forEach(kw => {
-    const cat = kw.category || 'UNCATEGORIZED';
-    if (!categorized[cat]) {
-      categorized[cat] = [];
-    }
-    categorized[cat].push(kw.name);
-  });
-
-  // If specific category requested
-  if (category) {
-    const matchedCategory = Object.keys(categorized).find(cat =>
-      cat.toUpperCase() === category || cat.toUpperCase().includes(category)
-    );
-
-    if (!matchedCategory) {
-      return bot.sendMessage(msg.chat.id,
-        `❌ Category "${category}" not found.\n\n` +
-        `*Available categories:*\n${Object.keys(categorized).sort().join('\n')}\n\n` +
-        `Use \`/keywords CATEGORY\` to see keywords in that category.`,
-        { parse_mode: 'Markdown' }
-      );
-    }
-
-    const kwList = categorized[matchedCategory].sort();
-    let response = `📚 *${matchedCategory}* (${kwList.length} keywords)\n\n`;
-
-    // Split into chunks if too many
-    const chunkSize = 30;
-    for (let i = 0; i < kwList.length; i += chunkSize) {
-      const chunk = kwList.slice(i, i + chunkSize);
-      response += chunk.map(kw => `• \`${kw}\``).join('\n') + '\n';
-
-      if (i + chunkSize < kwList.length) {
-        response += `\n_...continued in next message_\n`;
-        bot.sendMessage(msg.chat.id, response, { parse_mode: 'Markdown' });
-        response = `📚 *${matchedCategory}* (continued)\n\n`;
-      }
-    }
-
-    response += `\n💡 _Use_ \`/ask KEYWORD\` _to learn more_`;
-    return bot.sendMessage(msg.chat.id, response, { parse_mode: 'Markdown' });
-  }
-
-  // Show all categories with counts
-  let response = `📚 *Formula Keywords by Category*\n\n`;
-  response += `Total: ${keywords.length} keywords\n\n`;
-
-  const sortedCategories = Object.keys(categorized).sort();
-  for (const cat of sortedCategories) {
-    response += `*${cat}* (${categorized[cat].length})\n`;
-  }
-
-  response += `\n*Usage:*\n`;
-  response += `• \`/keywords\` - Show all categories\n`;
-  response += `• \`/keywords CATEGORY\` - List keywords in category\n`;
-  response += `• \`/ask KEYWORD\` - Get keyword details\n\n`;
-  response += `*Examples:*\n`;
-  response += `\`/keywords PAYFORM\`\n`;
-  response += `\`/keywords EMPFORM\`\n`;
-  response += `\`/keywords ATTINTF\``;
-
-  bot.sendMessage(msg.chat.id, response, { parse_mode: 'Markdown' })
-    .catch(err => console.error("Error sending keywords list:", err));
-});
-
 // ==================== NEW ENHANCEMENT: FORMULA CALCULATOR ====================
 bot.onText(/^\/parse/, async (msg) => {
   trackCommand(msg.chat.id, msg.message_id);
@@ -789,7 +766,7 @@ bot.onText(/^\/parse/, async (msg) => {
         const assignment = parts[i].trim();
         const match = assignment.match(/^([A-Z_][A-Z0-9_]*)\s*=\s*(.+)$/i);
         if (match) {
-          const varName = match[1];
+          const varName = match[1].toUpperCase(); // Convert to uppercase for case-insensitive matching
           let value = match[2].trim();
           // Remove quotes if present
           if ((value.startsWith('"') && value.endsWith('"')) ||
@@ -937,7 +914,7 @@ bot.on('message', async (msg) => {
     for (const assignment of assignments) {
       const match = assignment.match(/^([A-Z_][A-Z0-9_]*)\s*=\s*(.+)$/i);
       if (match) {
-        const varName = match[1];
+        const varName = match[1].toUpperCase(); // Convert to uppercase for case-insensitive matching
         let value = match[2].trim();
         // Remove quotes if present
         if ((value.startsWith('"') && value.endsWith('"')) ||
@@ -953,8 +930,8 @@ bot.on('message', async (msg) => {
       return;
     }
 
-    // Check if all required variables are provided
-    const missingVars = pending.variables.filter(v => !(v in variableValues));
+    // Check if all required variables are provided (case-insensitive)
+    const missingVars = pending.variables.filter(v => !(v.toUpperCase() in variableValues));
 
     if (missingVars.length > 0) {
       return bot.sendMessage(msg.chat.id,
