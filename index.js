@@ -618,7 +618,7 @@ bot.onText(/^\/ask(?:\s+(.+))?$/, async (msg, match) => {
         'DEFFORM': 'Built-in functions (IF, SUM, DATEDIFF, etc.)',
         'EMPDATA': 'Employee master data',
         'EMPFORM': 'Employee data (join date, service length)',
-        'PAYFORM': 'Component codes (AL_001, SALARY), BASE, @CODE for cross-reference',
+        'PAYFORM': 'Component codes (AL_001, SALARY), BASE, component references',
         'PAYVAR': 'Pay variables'
       };
 
@@ -670,7 +670,7 @@ bot.onText(/^\/ask(?:\s+(.+))?$/, async (msg, match) => {
         'DEFFORM': 'Built-in functions for formulas (IF, SUM, DATEDIFF, ROUND, etc.)',
         'EMPDATA': 'Employee master data fields - Returns text values (name, position, grade)',
         'EMPFORM': 'Employee date fields (JOINDATE, etc.) - Returns dates or numbers',
-        'PAYFORM': 'Component codes (AL_001, SALARY), BASE (component value), @CODE (get calculated result). Example: SALARY=BASE*2, BASE=10, then @SALARY=20',
+        'PAYFORM': 'Component codes (AL_001, SALARY), BASE (component value), component references (get calculated result). Example: SALARY=BASE*2, BASE=10, then result=20',
         'PAYVAR': 'Pay period variables - Returns values for current pay period'
       };
 
