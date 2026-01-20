@@ -596,21 +596,33 @@ bot.onText(/^\/ask(?:\s+(.+))?$/, async (msg, match) => {
       categorized[cat].push(kw.name);
     });
 
+    const categoryDescriptions = {
+      'ATTINTF': 'Attendance integration (overtime, work hours)',
+      'ATTSTATUS': 'Attendance status tracking',
+      'COMPCODE': 'Component code references',
+      'DEFFORM': 'Built-in functions (IF, SUM, DATEDIFF, etc.)',
+      'EMPDATA': 'Employee master data',
+      'EMPFORM': 'Employee data (join date, service length)',
+      'PAYFORM': 'Payroll formula keywords',
+      'PAYVAR': 'Pay variables'
+    };
+
     let response = `📚 *Formula Keywords*\n\n`;
     response += `Total: ${keywords.length} keywords\n\n`;
 
     const sortedCategories = Object.keys(categorized).sort();
     for (const cat of sortedCategories) {
+      const desc = categoryDescriptions[cat] || '';
       response += `*${cat}* (${categorized[cat].length})\n`;
+      response += `${desc}\n\n`;
     }
 
-    response += `\n*Usage:*\n`;
-    response += `• \`/ask\` - Show all categories\n`;
-    response += `• \`/ask CATEGORY\` - List keywords in category\n`;
-    response += `• \`/ask KEYWORD\` - Get keyword details\n\n`;
-    response += `*Examples:*\n`;
-    response += `\`/ask PAYFORM\` - Show payroll keywords\n`;
-    response += `\`/ask BASE\` - Get BASE keyword info`;
+    response += `*How to use:*\n`;
+    response += `Type: \`/ask ATTINTF\` to see all keywords\n\n`;
+    response += `*Try these:*\n`;
+    response += `\`/ask PAYFORM\`\n`;
+    response += `\`/ask DEFFORM\`\n`;
+    response += `\`/ask ATTINTF\``;
 
     return bot.sendMessage(msg.chat.id, response, { parse_mode: 'Markdown' })
       .then(m => trackMessage(m.chat.id, m.message_id))
@@ -632,25 +644,49 @@ bot.onText(/^\/ask(?:\s+(.+))?$/, async (msg, match) => {
     cat.toUpperCase() === queryUpper || cat.toUpperCase().includes(queryUpper)
   );
 
-  // If it's a category, list keywords in that category
+  // If it's a category, show keywords with descriptions
   if (matchedCategory) {
-    const kwList = categorized[matchedCategory].sort();
-    let response = `📚 *${matchedCategory}* (${kwList.length} keywords)\n\n`;
+    const kwNames = categorized[matchedCategory].sort();
 
-    const chunkSize = 30;
-    for (let i = 0; i < kwList.length; i += chunkSize) {
-      const chunk = kwList.slice(i, i + chunkSize);
-      response += chunk.map(kw => `• \`${kw}\``).join('\n') + '\n';
+    // Get category description
+    const categoryDescriptions = {
+      'ATTINTF': 'Keywords used in attendance integration (overtime, work hours)',
+      'ATTSTATUS': 'Keywords for attendance status tracking',
+      'COMPCODE': 'Component code references',
+      'DEFFORM': 'Built-in functions (IF, SUM, DATEDIFF, etc.)',
+      'EMPDATA': 'Employee master data (name, position, grade)',
+      'EMPFORM': 'Employee data (join date, service length, etc.)',
+      'PAYFORM': 'Payroll formula keywords for calculations',
+      'PAYVAR': 'Pay variables'
+    };
 
-      if (i + chunkSize < kwList.length) {
-        response += `\n_...continued in next message_\n`;
-        bot.sendMessage(msg.chat.id, response, { parse_mode: 'Markdown' })
+    let response = `📚 *${matchedCategory}* (${kwNames.length} keywords)\n`;
+    response += `${categoryDescriptions[matchedCategory] || ''}\n\n`;
+
+    // Get full keyword objects with descriptions
+    const kwObjects = kwNames.map(name =>
+      keywords.find(k => k.name === name)
+    ).filter(k => k);
+
+    for (const kw of kwObjects) {
+      response += `*${kw.name}*\n`;
+      if (kw.description) {
+        const shortDesc = kw.description.length > 80
+          ? kw.description.substring(0, 80) + '...'
+          : kw.description;
+        response += `${shortDesc}\n\n`;
+      } else {
+        response += `\n`;
+      }
+
+      // Check if response is getting too long (Telegram limit ~4096 chars)
+      if (response.length > 3500) {
+        await bot.sendMessage(msg.chat.id, response, { parse_mode: 'Markdown' })
           .then(m => trackMessage(m.chat.id, m.message_id));
         response = `📚 *${matchedCategory}* (continued)\n\n`;
       }
     }
 
-    response += `\n💡 _Use_ \`/ask KEYWORD\` _to learn more_`;
     return bot.sendMessage(msg.chat.id, response, { parse_mode: 'Markdown' })
       .then(m => trackMessage(m.chat.id, m.message_id))
       .catch(err => console.error("Error sending category list:", err));

@@ -1,85 +1,210 @@
-# `/ask` Command - Formula Documentation Search
+# `/ask` Command - Formula Documentation Browser
 
 ## Overview
-The `/ask` command allows users to search and retrieve information about payroll formula keywords directly from the Telegram bot.
+The `/ask` command provides a 2-level browsing system for payroll formula keywords. Browse by category, then see all keywords with descriptions.
 
-## Features
+## How It Works
 
-### 1. Keyword Search
-- **Exact match**: Searches for exact keyword names (e.g., `BASE`, `JOINDATE`)
-- **Alias matching**: Supports keyword aliases (e.g., "Join Date" for `JOINDATE`)
-- **Partial match**: Falls back to partial matching if exact match not found
+### Level 1: Browse Categories
+Type `/ask` (no parameters) to see all 8 categories.
 
-### 2. Response Format
-Each keyword response includes:
-- **Name**: The official keyword name
-- **Category**: The category (PAYFORM, EMPFORM, ATTINTF, etc.)
-- **Syntax**: How to use the keyword in formulas
-- **Description**: Brief explanation of what the keyword does
-- **Example Usage**: Up to 2 practical examples with formulas and descriptions
-- **Aliases**: Alternative names for the keyword
-
-### 3. Documentation Source
-The bot reads from three markdown files in `docs/formula/`:
-- `keywords.md` - Comprehensive keyword reference (91 keywords)
-- `examples.md` - Practical formula examples
-- `reference.md` - Technical documentation
-
-## Usage Examples
-
-### Basic Usage
+**Command:**
 ```
-/ask BASE
+/ask
 ```
 
 **Response:**
 ```
-📘 *BASE*
+📚 Formula Keywords
 
-*Category:* PAYFORM
-*Syntax:* `BASE`
+Total: 90 keywords
 
-*Description:*
-References the current component's base value for calculations
+ATTINTF (11)
+Attendance integration (overtime, work hours)
 
-*Example Usage:*
+ATTSTATUS (16)
+Attendance status tracking
 
-1. *Simple Percentage*
-   Formula: `BASE * 0.05`
-   Calculate 5% bonus
+COMPCODE (1)
+Component code references
 
-2. *Conditional Calculation*
-   Formula: `IF(BASE > 10000, BASE * 0.10, BASE * 0.05)`
-   10% if base exceeds 10000, otherwise 5%
+DEFFORM (28)
+Built-in functions (IF, SUM, DATEDIFF, etc.)
+
+EMPDATA (9)
+Employee master data
+
+EMPFORM (16)
+Employee data (join date, service length)
+
+PAYFORM (8)
+Payroll formula keywords
+
+PAYVAR (1)
+Pay variables
+
+How to use:
+Type: `/ask ATTINTF` to see all keywords
+
+Try these:
+`/ask PAYFORM`
+`/ask DEFFORM`
+`/ask ATTINTF`
 ```
 
-### Search by Alias
+### Level 2: Browse Keywords in Category
+Type `/ask CATEGORY` to see all keywords with brief descriptions.
+
+**Command:**
 ```
-/ask Join Date
+/ask ATTINTF
 ```
 
-Returns information for `JOINDATE` keyword.
+**Response:**
+```
+📚 ATTINTF (11 keywords)
+Keywords used in attendance integration (overtime, work hours)
 
-### Employee Data Keywords
-```
-/ask JOINDATE
-/ask GRADE
-/ask POSITIONNAME
+OTHWD
+Overtime hours on working day
+
+OTINDEX
+Overtime index for calculations
+
+OTMEAL
+Overtime meal allowance
+
+OTPH_EXC
+Overtime on public holiday (exception period)
+
+OTPH_FULL
+Overtime on public holiday (full day period)
+
+OTPH_HALF
+Overtime on public holiday (half day period)
+
+OTRD_EXC
+Overtime on rest day (exception period)
+
+OTRD_FULL
+Overtime on rest day (full day period)
+
+OTRD_HALF
+Overtime on rest day (half day period)
+
+OTTRANSPORT
+Overtime transport allowance
+
+OVT_TOTAL
+Total overtime hours
 ```
 
-### Overtime Keywords
+## Available Categories
+
+### 1. ATTINTF (11 keywords)
+**Description:** Attendance integration - overtime and work hours tracking
+
+**Keywords:** OTHWD, OTINDEX, OTMEAL, OTPH_EXC, OTPH_FULL, OTPH_HALF, OTRD_EXC, OTRD_FULL, OTRD_HALF, OTTRANSPORT, OVT_TOTAL
+
+**Use for:** Overtime calculations, meal allowances, transport allowances
+
+---
+
+### 2. ATTSTATUS (16 keywords)
+**Description:** Attendance status tracking
+
+**Keywords:** ABO, ACD, ACDB, AWD, AWH, AWDB, AWDSH, PRSMA, PRSMS, TARDINESS, TCD, TCDB, TWA, TWD, TWDB, UNDERTIME
+
+**Use for:** Tracking employee presence, absences, working days
+
+---
+
+### 3. COMPCODE (1 keyword)
+**Description:** Component code references
+
+**Keywords:** (Dynamic component codes)
+
+**Use for:** Referencing other payroll components
+
+---
+
+### 4. DEFFORM (28 keywords)
+**Description:** Built-in functions for formula calculations
+
+**Keywords:** ABS, AND, CONCATENATE, CONCATENATESKIPNULL, COUNT, CREATEDATE, DATEADD, DATEDIFF, DATETIME_NOW, DAY, DAYOFWEEK, DAYSINMONTH, FINDLIST, HOUR, IF, ISDATE, ISNUMERIC, LENGTHOFSERVICE, MAX, MIN, MINUTE, MONTH, OR, ROUND, SECOND, SUM, TODAY, YEAR
+
+**Use for:** Conditional logic, date calculations, math operations, string manipulation
+
+---
+
+### 5. EMPDATA (9 keywords)
+**Description:** Employee master data fields
+
+**Keywords:** COSTCENTER, DEPTNAME, EMPGENDER, EMPNO, EMPLOYMENTSTATUS, GRADE, POSITIONNAME, WORKLOCATION, (and more)
+
+**Use for:** Accessing employee information in formulas
+
+---
+
+### 6. EMPFORM (16 keywords)
+**Description:** Employee data related to dates and service
+
+**Keywords:** EFFECTIVEDATE, ENDDATE, FULLJOINDATE, JOINDATE, LENGTHOFSERVICE_DAY, LENGTHOFSERVICE_MONTH, LENGTHOFSERVICE_YEAR, LOS_CONTRACT1, LOS_CONTRACT2, LOS_ENDOFCONTRACT_DAY, LOS_ENDOFCONTRACT_MONTH, LOS_PERMANENT, LOS_PROBATION, PENSIONDATE, PERMANENTDATE, TERMINATEDATE
+
+**Use for:** Calculating service length, probation periods, seniority-based benefits
+
+---
+
+### 7. PAYFORM (8 keywords)
+**Description:** Payroll formula keywords for calculations
+
+**Keywords:** @COMPONENT_CODE, BASE, COMPONENT_CODE_RESULT, PRORATECD_CODE, PRORATEPRS_CODE, PRORATEWD_CODE, PRORATEWS_CODE, YTD_COMPONENT_CODE
+
+**Use for:** Component references, proration, year-to-date calculations
+
+---
+
+### 8. PAYVAR (1 keyword)
+**Description:** Pay variables
+
+**Keywords:** (Pay period variables)
+
+**Use for:** Dynamic pay period data
+
+---
+
+## Quick Examples
+
+### Browse Categories
 ```
-/ask OTRD_FULL
-/ask OTPH_HALF
-/ask OVT_TOTAL
+/ask
 ```
 
-### Special Keywords
+### View Payroll Keywords
 ```
-/ask @COMPONENT_CODE
-/ask YTD_COMPONENT_CODE
-/ask PRORATECD_CODE
+/ask PAYFORM
 ```
+Shows: BASE, @COMPONENT_CODE, YTD_COMPONENT_CODE, proration keywords, etc.
+
+### View Built-in Functions
+```
+/ask DEFFORM
+```
+Shows: IF, SUM, DATEDIFF, ROUND, CONCATENATE, etc.
+
+### View Overtime Keywords
+```
+/ask ATTINTF
+```
+Shows: OTRD_FULL, OTPH_HALF, OVT_TOTAL, etc.
+
+### View Employee Data
+```
+/ask EMPFORM
+```
+Shows: JOINDATE, TERMINATEDATE, LENGTHOFSERVICE_YEAR, etc.
+
+---
 
 ## Implementation Details
 
@@ -88,199 +213,35 @@ Returns information for `JOINDATE` keyword.
 botbatman/
 ├── docs/
 │   ├── formula/
-│   │   ├── keywords.md    (4,671 lines - keyword reference)
+│   │   ├── keywords.md    (4,671 lines - 90 keywords)
 │   │   ├── examples.md    (1,582 lines - practical examples)
 │   │   └── reference.md   (1,270 lines - technical docs)
 │   └── ASK_COMMAND.md     (this file)
-├── index.js               (main bot file with /ask command)
+├── index.js               (main bot file)
 └── .gitignore
 ```
 
 ### Code Location
-- **Parser function**: `parseKeywordsFromMarkdown()` - Lines 88-169 in [index.js](../index.js)
-- **Search function**: `searchKeyword()` - Lines 171-191 in [index.js](../index.js)
-- **Command handler**: `/ask` command - Lines 581-638 in [index.js](../index.js)
+- **Parser function**: `parseKeywordsFromMarkdown()` in [index.js](../index.js)
+- **Search function**: `searchKeyword()` in [index.js](../index.js)
+- **Command handler**: `/ask` command in [index.js](../index.js)
 
-### Search Algorithm
-1. **Exact match**: `keyword.name === searchTerm`
-2. **Alias match**: Check all aliases for exact match
-3. **Partial match**: `keyword.name.includes(searchTerm)`
+### Features
+- **2-Level Navigation**: Categories → Keywords with descriptions
+- **Category Descriptions**: Each category shows its purpose
+- **Brief Descriptions**: Each keyword shows a short explanation
+- **Auto-Split**: Long category lists split across multiple messages
+- **Smart Matching**: Case-insensitive category search
 
-### YAML Parsing
-The parser extracts data from YAML frontmatter in keywords.md:
-```yaml
 ---
-keyword: BASE
-aliases: []
-category: PAYFORM
-syntax: BASE
-description: References the current component's base value for calculations
----
-```
-
-## Benefits
-
-1. **Quick Reference**: Instantly look up keywords without leaving Telegram
-2. **Always Available**: Documentation is embedded in the bot
-3. **No External API**: Works offline, no paid API required
-4. **Up-to-date**: Uses the same markdown files as the main documentation
-5. **User Friendly**: Simple command syntax with helpful examples
-
-## Deployment Notes
-
-### For Koyeb Deployment
-The markdown files in `docs/formula/` must be included in the git repository:
-```bash
-git add docs/
-git commit -m "Add formula documentation for /ask command"
-git push
-```
-
-### File Sizes
-- keywords.md: ~92 KB (4,671 lines)
-- examples.md: ~32 KB (1,582 lines)
-- reference.md: ~33 KB (1,270 lines)
-- Total: ~157 KB
-
-### Memory Impact
-- Files are read on each `/ask` command
-- Parsing takes ~50-100ms per search
-- No caching implemented (files are re-parsed each time)
-
-## Future Enhancements
-
-Possible improvements:
-1. **Cache parsed keywords**: Load once on startup instead of per request
-2. **Search examples.md**: Allow searching practical examples by scenario
-3. **Fuzzy search**: Better matching for misspelled keywords
-4. **Related keywords**: Show related keywords in response
-5. **Multi-language**: Support Indonesian keyword aliases
-
-## Testing
-
-Test commands to verify functionality:
-```
-/ask              # Show usage
-/ask BASE         # Test basic keyword
-/ask JOINDATE     # Test with aliases
-/ask @COMPONENT   # Test special characters
-/ask overtime     # Test partial match
-/ask NOTFOUND     # Test error handling
-```
 
 ## Related Commands
 
-- `/keywords` - List all available formula keywords by category
 - `/parse` - Calculate formulas with variables
 - `/help` - Show all available commands
 - `/clear` - Clear bot messages
 
 ---
 
-# `/keywords` Command - List All Keywords
-
-## Overview
-The `/keywords` command provides a categorized list of all available formula keywords in the documentation.
-
-## Usage
-
-### Show All Categories
-```
-/keywords
-```
-
-**Response:**
-```
-📚 *Formula Keywords by Category*
-
-Total: 90 keywords
-
-*ATTINTF* (11)
-*ATTSTATUS* (16)
-*COMPCODE* (1)
-*DEFFORM* (28)
-*EMPDATA* (9)
-*EMPFORM* (16)
-*PAYFORM* (8)
-*PAYVAR* (1)
-
-*Usage:*
-• `/keywords` - Show all categories
-• `/keywords CATEGORY` - List keywords in category
-• `/ask KEYWORD` - Get keyword details
-
-*Examples:*
-`/keywords PAYFORM`
-`/keywords EMPFORM`
-`/keywords ATTINTF`
-```
-
-### List Keywords in Specific Category
-```
-/keywords PAYFORM
-```
-
-**Response:**
-```
-📚 *PAYFORM* (8 keywords)
-
-• `@COMPONENT_CODE`
-• `BASE`
-• `COMPONENT_CODE_RESULT`
-• `PRORATECD_CODE`
-• `PRORATEPRS_CODE`
-• `PRORATEWD_CODE`
-• `PRORATEWS_CODE`
-• `YTD_COMPONENT_CODE`
-
-💡 _Use_ `/ask KEYWORD` _to learn more_
-```
-
-## Categories
-
-### PAYFORM (8 keywords)
-Payroll formula keywords for component calculations and cross-references.
-
-### EMPFORM (16 keywords)
-Employee data keywords like join date, termination date, service length.
-
-### DEFFORM (28 keywords)
-Built-in functions like IF, SUM, MAX, DATEDIFF, ROUND, etc.
-
-### ATTINTF (11 keywords)
-Attendance integration keywords for overtime and work hours.
-
-### ATTSTATUS (16 keywords)
-Attendance status keywords for presence tracking.
-
-### EMPDATA (9 keywords)
-Employee master data like name, position, grade, department.
-
-### COMPCODE (1 keyword)
-Component code references.
-
-### PAYVAR (1 keyword)
-Pay variables.
-
-## Features
-
-- **Category Browsing**: View keywords organized by functionality
-- **Quick Reference**: See all available keywords at a glance
-- **Smart Chunking**: Large categories are split into multiple messages
-- **Integration**: Works seamlessly with `/ask` command for details
-
-## Examples
-
-```
-/keywords              # Show all categories
-/keywords PAYFORM      # Payroll formulas
-/keywords EMPFORM      # Employee data
-/keywords DEFFORM      # Built-in functions
-/keywords ATTINTF      # Attendance/overtime
-/keywords overtime     # Partial match works too
-```
-
----
-
 **Last Updated**: 2026-01-20
-**Version**: 1.0.0
+**Version**: 2.0.0 (Simplified 2-level navigation)
