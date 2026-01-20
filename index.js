@@ -590,11 +590,19 @@ bot.onText(/^\/reset(?:\s+(.+))?$/, async (msg, match) => {
 bot.onText(/^\/ask(?:\s+(.+))?$/, async (msg, match) => {
   trackCommand(msg.chat.id, msg.message_id);
 
-  const query = match[1];
-  const keywords = parseKeywordsFromMarkdown();
+  try {
+    const query = match[1];
+    const keywords = parseKeywordsFromMarkdown();
 
-  // No parameter - show all categories
-  if (!query) {
+    if (!keywords || keywords.length === 0) {
+      return bot.sendMessage(msg.chat.id,
+        '⚠️ Error: Unable to load keywords documentation.\nPlease try again later.',
+        { parse_mode: 'Markdown' }
+      ).then(m => trackMessage(m.chat.id, m.message_id));
+    }
+
+    // No parameter - show all categories
+    if (!query) {
     const categorized = {};
     keywords.forEach(kw => {
       const cat = kw.category || 'UNCATEGORIZED';
@@ -631,143 +639,149 @@ bot.onText(/^\/ask(?:\s+(.+))?$/, async (msg, match) => {
     response += `\`/ask DEFFORM\`\n`;
     response += `\`/ask ATTINTF\``;
 
-    return bot.sendMessage(msg.chat.id, response, { parse_mode: 'Markdown' })
-      .then(m => trackMessage(m.chat.id, m.message_id))
-      .catch(err => console.error("Error sending categories:", err));
-  }
-
-  // Check if query is a category
-  const categorized = {};
-  keywords.forEach(kw => {
-    const cat = kw.category || 'UNCATEGORIZED';
-    if (!categorized[cat]) {
-      categorized[cat] = [];
-    }
-    categorized[cat].push(kw.name);
-  });
-
-  const queryUpper = query.toUpperCase().trim();
-  const matchedCategory = Object.keys(categorized).find(cat =>
-    cat.toUpperCase() === queryUpper || cat.toUpperCase().includes(queryUpper)
-  );
-
-  // If it's a category, show keywords with descriptions
-  if (matchedCategory) {
-    const kwNames = categorized[matchedCategory].sort();
-
-    // Get category description
-    const categoryDescriptions = {
-      'ATTINTF': 'Attendance integration keywords - Returns numbers for overtime and work hours',
-      'ATTSTATUS': 'Attendance status tracking - Returns numbers for days worked, absences, etc.',
-      'DEFFORM': 'Built-in functions for formulas (IF, SUM, DATEDIFF, ROUND, etc.)',
-      'EMPDATA': 'Employee master data fields - Returns text values (name, position, grade)',
-      'EMPFORM': 'Employee date fields (JOINDATE, etc.) - Returns dates or numbers',
-      'PAYFORM': 'Component codes (AL_001, SALARY), BASE (component value), @CODE (get calculated result). Example: SALARY=BASE*2, BASE=10, then @SALARY=20',
-      'PAYVAR': 'Pay period variables - Returns values for current pay period'
-    };
-
-    let response = `📚 *${matchedCategory}* (${kwNames.length} keywords)\n`;
-    response += `_${categoryDescriptions[matchedCategory] || ''}_\n\n`;
-
-    // Get full keyword objects with descriptions
-    const kwObjects = kwNames.map(name =>
-      keywords.find(k => k.name === name)
-    ).filter(k => k);
-
-    for (const kw of kwObjects) {
-      response += `*${kw.name}*\n`;
-      if (kw.description) {
-        const shortDesc = kw.description.length > 80
-          ? kw.description.substring(0, 80) + '...'
-          : kw.description;
-        response += `${shortDesc}\n`;
-      }
-
-      // Add first YAML example if available
-      if (kw.yamlExamples && kw.yamlExamples.length > 0) {
-        response += `_Example:_ \`${kw.yamlExamples[0]}\`\n`;
-      }
-      response += `\n`;
-
-      // Check if response is getting too long (Telegram limit ~4096 chars)
-      if (response.length > 3500) {
-        await bot.sendMessage(msg.chat.id, response, { parse_mode: 'Markdown' })
-          .then(m => trackMessage(m.chat.id, m.message_id));
-        response = `📚 *${matchedCategory}* (continued)\n\n`;
-      }
-    }
-
-    return bot.sendMessage(msg.chat.id, response, { parse_mode: 'Markdown' })
-      .then(m => trackMessage(m.chat.id, m.message_id))
-      .catch(err => console.error("Error sending category list:", err));
-  }
-
-  // Otherwise, search for keyword
-  const keyword = searchKeyword(query);
-
-  if (!keyword) {
-    return bot.sendMessage(msg.chat.id,
-      `❌ "${query}" not found.\n\n` +
-      "Try:\n" +
-      "• \`/ask\` to see all categories\n" +
-      "• \`/ask PAYFORM\` to list keywords\n" +
-      "• Check keyword spelling",
-      { parse_mode: 'Markdown' }
-    )
-      .then(m => trackMessage(m.chat.id, m.message_id))
-      .catch(err => console.error("Error:", err));
-  }
-
-  // Build response
-  let response = `📘 *${keyword.name}*\n\n`;
-
-  // Add category
-  if (keyword.category) {
-    response += `*Category:* ${keyword.category}\n`;
-  }
-
-  // Add syntax
-  if (keyword.syntax) {
-    response += `*Syntax:* \`${keyword.syntax}\`\n\n`;
-  }
-
-  // Add description
-  if (keyword.description) {
-    response += `*Description:*\n${keyword.description}\n\n`;
-  } else if (keyword.fullDescription) {
-    const desc = keyword.fullDescription.substring(0, 300);
-    response += `*Description:*\n${desc}${keyword.fullDescription.length > 300 ? '...' : ''}\n\n`;
-  }
-
-  // Add examples (limit to 2)
-  if (keyword.examples && keyword.examples.length > 0) {
-    response += `*Example Usage:*\n`;
-    const examplesLimit = Math.min(2, keyword.examples.length);
-    for (let i = 0; i < examplesLimit; i++) {
-      const ex = keyword.examples[i];
-      response += `\n${i + 1}. *${ex.title}*\n`;
-      if (ex.formula) {
-        response += `   Formula: \`${ex.formula}\`\n`;
-      }
-      if (ex.description) {
-        response += `   ${ex.description}\n`;
-      }
-    }
-  }
-
-  // Add aliases
-  if (keyword.aliases && keyword.aliases.length > 0) {
-    response += `\n*Aliases:* ${keyword.aliases.join(', ')}`;
-  }
-
-  bot.sendMessage(msg.chat.id, response, { parse_mode: 'Markdown' })
-    .then(m => trackMessage(m.chat.id, m.message_id))
-    .catch(err => {
-      console.error("Error sending keyword info:", err);
-      bot.sendMessage(msg.chat.id, "Error displaying keyword information.")
+      return bot.sendMessage(msg.chat.id, response, { parse_mode: 'Markdown' })
         .then(m => trackMessage(m.chat.id, m.message_id))
-        .catch(e => console.error("Error sending error message:", e));
+        .catch(err => console.error("Error sending categories:", err));
+    }
+
+    // Check if query is a category
+    const categorized = {};
+    keywords.forEach(kw => {
+      const cat = kw.category || 'UNCATEGORIZED';
+      if (!categorized[cat]) {
+        categorized[cat] = [];
+      }
+      categorized[cat].push(kw.name);
     });
+
+    const queryUpper = query.toUpperCase().trim();
+    const matchedCategory = Object.keys(categorized).find(cat =>
+      cat.toUpperCase() === queryUpper || cat.toUpperCase().includes(queryUpper)
+    );
+
+    // If it's a category, show keywords with descriptions
+    if (matchedCategory) {
+      const kwNames = categorized[matchedCategory].sort();
+
+      // Get category description
+      const categoryDescriptions = {
+        'ATTINTF': 'Attendance integration keywords - Returns numbers for overtime and work hours',
+        'ATTSTATUS': 'Attendance status tracking - Returns numbers for days worked, absences, etc.',
+        'DEFFORM': 'Built-in functions for formulas (IF, SUM, DATEDIFF, ROUND, etc.)',
+        'EMPDATA': 'Employee master data fields - Returns text values (name, position, grade)',
+        'EMPFORM': 'Employee date fields (JOINDATE, etc.) - Returns dates or numbers',
+        'PAYFORM': 'Component codes (AL_001, SALARY), BASE (component value), @CODE (get calculated result). Example: SALARY=BASE*2, BASE=10, then @SALARY=20',
+        'PAYVAR': 'Pay period variables - Returns values for current pay period'
+      };
+
+      let response = `📚 *${matchedCategory}* (${kwNames.length} keywords)\n`;
+      response += `_${categoryDescriptions[matchedCategory] || ''}_\n\n`;
+
+      // Get full keyword objects with descriptions
+      const kwObjects = kwNames.map(name =>
+        keywords.find(k => k.name === name)
+      ).filter(k => k);
+
+      for (const kw of kwObjects) {
+        response += `*${kw.name}*\n`;
+        if (kw.description) {
+          const shortDesc = kw.description.length > 80
+            ? kw.description.substring(0, 80) + '...'
+            : kw.description;
+          response += `${shortDesc}\n`;
+        }
+
+        // Add first YAML example if available
+        if (kw.yamlExamples && kw.yamlExamples.length > 0) {
+          response += `_Example:_ \`${kw.yamlExamples[0]}\`\n`;
+        }
+        response += `\n`;
+
+        // Check if response is getting too long (Telegram limit ~4096 chars)
+        if (response.length > 3500) {
+          await bot.sendMessage(msg.chat.id, response, { parse_mode: 'Markdown' })
+            .then(m => trackMessage(m.chat.id, m.message_id));
+          response = `📚 *${matchedCategory}* (continued)\n\n`;
+        }
+      }
+
+      return bot.sendMessage(msg.chat.id, response, { parse_mode: 'Markdown' })
+        .then(m => trackMessage(m.chat.id, m.message_id))
+        .catch(err => console.error("Error sending category list:", err));
+    }
+
+    // Otherwise, search for keyword
+    const keyword = searchKeyword(query);
+
+    if (!keyword) {
+      return bot.sendMessage(msg.chat.id,
+        `❌ "${query}" not found.\n\n` +
+        "Try:\n" +
+        "• \`/ask\` to see all categories\n" +
+        "• \`/ask PAYFORM\` to list keywords\n" +
+        "• Check keyword spelling",
+        { parse_mode: 'Markdown' }
+      )
+        .then(m => trackMessage(m.chat.id, m.message_id))
+        .catch(err => console.error("Error:", err));
+    }
+
+    // Build response
+    let response = `📘 *${keyword.name}*\n\n`;
+
+    // Add category
+    if (keyword.category) {
+      response += `*Category:* ${keyword.category}\n`;
+    }
+
+    // Add syntax
+    if (keyword.syntax) {
+      response += `*Syntax:* \`${keyword.syntax}\`\n\n`;
+    }
+
+    // Add description
+    if (keyword.description) {
+      response += `*Description:*\n${keyword.description}\n\n`;
+    } else if (keyword.fullDescription) {
+      const desc = keyword.fullDescription.substring(0, 300);
+      response += `*Description:*\n${desc}${keyword.fullDescription.length > 300 ? '...' : ''}\n\n`;
+    }
+
+    // Add examples (limit to 2)
+    if (keyword.examples && keyword.examples.length > 0) {
+      response += `*Example Usage:*\n`;
+      const examplesLimit = Math.min(2, keyword.examples.length);
+      for (let i = 0; i < examplesLimit; i++) {
+        const ex = keyword.examples[i];
+        response += `\n${i + 1}. *${ex.title}*\n`;
+        if (ex.formula) {
+          response += `   Formula: \`${ex.formula}\`\n`;
+        }
+        if (ex.description) {
+          response += `   ${ex.description}\n`;
+        }
+      }
+    }
+
+    // Add aliases
+    if (keyword.aliases && keyword.aliases.length > 0) {
+      response += `\n*Aliases:* ${keyword.aliases.join(', ')}`;
+    }
+
+    bot.sendMessage(msg.chat.id, response, { parse_mode: 'Markdown' })
+      .then(m => trackMessage(m.chat.id, m.message_id))
+      .catch(err => {
+        console.error("Error sending keyword info:", err);
+        bot.sendMessage(msg.chat.id, "Error displaying keyword information.")
+          .then(m => trackMessage(m.chat.id, m.message_id))
+          .catch(e => console.error("Error sending error message:", e));
+      });
+  } catch (error) {
+    console.error("Error in /ask command:", error);
+    bot.sendMessage(msg.chat.id, '⚠️ An error occurred. Please try again.')
+      .then(m => trackMessage(m.chat.id, m.message_id))
+      .catch(e => console.error("Error sending error message:", e));
+  }
 });
 
 // ==================== NEW ENHANCEMENT: FORMULA CALCULATOR ====================
