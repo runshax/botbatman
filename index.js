@@ -70,9 +70,9 @@ const substituteVariables = (formula, variableValues) => {
   let result = formula;
 
   for (const [varName, value] of Object.entries(variableValues)) {
-    // Check if value is a string (needs quotes) or number
-    const isString = isNaN(value);
-    const replacement = isString ? `"${value}"` : value;
+    // Always treat as string and add quotes
+    // User can provide numbers without quotes if they want numeric comparison
+    const replacement = `"${value}"`;
 
     // Replace all occurrences of the variable
     const regex = new RegExp(`\\b${varName}\\b`, 'g');
@@ -538,8 +538,6 @@ bot.onText(/^\/parse(?:\s+(.+))?$/, async (msg, match) => {
     const result = parseFormula(formulaWithValues);
 
     if (result.success) {
-      // Format the formula for better readability
-      const formattedOriginal = formatFormula(actualFormula);
       const formattedWithValues = Object.keys(variableValues).length > 0
         ? formatFormula(formulaWithValues)
         : null;
@@ -551,10 +549,7 @@ bot.onText(/^\/parse(?:\s+(.+))?$/, async (msg, match) => {
         for (const [varName, value] of Object.entries(variableValues)) {
           response += `• ${varName} = \`${value}\`\n`;
         }
-        response += `\n*Original Formula:*\n\`\`\`\n${formattedOriginal}\n\`\`\`\n\n`;
-        response += `*With Values:*\n\`\`\`\n${formattedWithValues}\n\`\`\``;
-      } else {
-        response += `*Formatted Formula:*\n\`\`\`\n${formattedOriginal}\n\`\`\``;
+        response += `\n*With Values:*\n\`\`\`\n${formattedWithValues}\n\`\`\``;
       }
 
       bot.sendMessage(msg.chat.id, response, { parse_mode: 'Markdown' })
@@ -668,7 +663,6 @@ bot.on('message', async (msg) => {
     const result = parseFormula(formulaWithValues);
 
     if (result.success) {
-      const formattedOriginal = formatFormula(pending.formula);
       const formattedWithValues = formatFormula(formulaWithValues);
 
       let response = `✅ *Result:* \`${result.result}\`\n\n`;
@@ -676,8 +670,7 @@ bot.on('message', async (msg) => {
       for (const [varName, value] of Object.entries(variableValues)) {
         response += `• ${varName} = \`${value}\`\n`;
       }
-      response += `\n*Original Formula:*\n\`\`\`\n${formattedOriginal}\n\`\`\`\n\n`;
-      response += `*With Values:*\n\`\`\`\n${formattedWithValues}\n\`\`\``;
+      response += `\n*With Values:*\n\`\`\`\n${formattedWithValues}\n\`\`\``;
 
       bot.sendMessage(msg.chat.id, response, { parse_mode: 'Markdown' })
         .then(m => trackMessage(m.chat.id, m.message_id))
