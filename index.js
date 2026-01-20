@@ -230,9 +230,26 @@ app.listen(PORT, () => {
 // 2. BOT SETUP
 const token = process.env.BOT_TOKEN;
 const chatId = process.env.CHAT_ID;
-const bot = new TelegramBot(token, { polling: true });
+const bot = new TelegramBot(token, {
+  polling: {
+    interval: 300,
+    autoStart: true,
+    params: {
+      timeout: 10
+    }
+  }
+});
 
 console.log("Telegram bot is starting...");
+
+// Handle polling errors (409 conflicts during deployment)
+bot.on('polling_error', (error) => {
+  if (error.code === 'ETELEGRAM' && error.response && error.response.body && error.response.body.error_code === 409) {
+    console.log('Polling conflict detected (409). Another instance may be running. Will retry...');
+  } else {
+    console.error('Polling error:', error.code, error.message);
+  }
+});
 
 // 3. SCHEDULED REMINDERS (Mon-Fri)
 const timezone = "Asia/Jakarta";
