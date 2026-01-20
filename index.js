@@ -722,12 +722,22 @@ bot.onText(/^\/ask(?:\s+(.+))?$/, async (msg, match) => {
           const shortDesc = kw.description.length > 80
             ? kw.description.substring(0, 80) + '...'
             : kw.description;
-          response += `${shortDesc}\n`;
+          // Escape HTML special characters
+          const escapedDesc = shortDesc
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;');
+          response += `${escapedDesc}\n`;
         }
 
         // Add first YAML example if available
         if (kw.yamlExamples && kw.yamlExamples.length > 0) {
-          response += `<i>Example:</i> <code>${kw.yamlExamples[0]}</code>\n`;
+          // Escape HTML in examples
+          const escapedExample = kw.yamlExamples[0]
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;');
+          response += `<i>Example:</i> <code>${escapedExample}</code>\n`;
         }
         response += `\n`;
 
