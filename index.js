@@ -82,6 +82,130 @@ const substituteVariables = (formula, variableValues) => {
   return result;
 };
 
+// Helper function to parse keywords from markdown
+const fs = require('fs');
+const path = require('path');
+
+const parseKeywordsFromMarkdown = () => {
+  try {
+    const keywordsPath = path.join(__dirname, 'docs', 'formula', 'keywords.md');
+    const content = fs.readFileSync(keywordsPath, 'utf8');
+
+    const keywords = [];
+    const blocks = content.split(/\n---\nkeyword:/);
+
+    for (let i = 1; i < blocks.length; i++) {
+      const block = 'keyword:' + blocks[i];
+      const lines = block.split('\n');
+
+      const keyword = {};
+      let inYaml = true;
+      let description = '';
+      let examples = [];
+      let captureExamples = false;
+      let currentSection = '';
+
+      for (const line of lines) {
+        if (line === '---') {
+          inYaml = false;
+          continue;
+        }
+
+        if (inYaml) {
+          if (line.startsWith('keyword:')) {
+            keyword.name = line.replace('keyword:', '').trim().replace(/['"]/g, '');
+            currentSection = 'keyword';
+          } else if (line.startsWith('aliases:')) {
+            keyword.aliases = [];
+            currentSection = 'aliases';
+          } else if (line.startsWith('examples:')) {
+            currentSection = 'yaml_examples';
+          } else if (line.startsWith('related_keywords:')) {
+            currentSection = 'related';
+          } else if (line.startsWith('  - ') && currentSection === 'aliases') {
+            keyword.aliases.push(line.replace('  - ', '').trim().replace(/['"]/g, ''));
+          } else if (line.startsWith('category:')) {
+            keyword.category = line.replace('category:', '').trim();
+            currentSection = 'category';
+          } else if (line.startsWith('syntax:')) {
+            keyword.syntax = line.replace('syntax:', '').trim().replace(/['"]/g, '');
+            currentSection = 'syntax';
+          } else if (line.startsWith('description:')) {
+            keyword.description = line.replace('description:', '').trim();
+            currentSection = 'description';
+          }
+        } else {
+          // Parse description section
+          if (line.startsWith('### Description')) {
+            captureExamples = false;
+            continue;
+          }
+          if (line.startsWith('### Examples')) {
+            captureExamples = true;
+            continue;
+          }
+          if (line.startsWith('**Example') && captureExamples) {
+            const exampleMatch = line.match(/\*\*Example \d+: (.+)\*\*/);
+            if (exampleMatch) {
+              examples.push({ title: exampleMatch[1], lines: [] });
+            }
+          }
+          if (line.startsWith('Formula:') && captureExamples && examples.length > 0) {
+            examples[examples.length - 1].formula = line.replace('Formula:', '').trim();
+          }
+          if (line.startsWith('Description:') && captureExamples && examples.length > 0) {
+            examples[examples.length - 1].description = line.replace('Description:', '').trim();
+          }
+
+          if (!captureExamples && line.trim() && !line.startsWith('#') && !line.startsWith('```') && description.length < 500) {
+            description += line.trim() + ' ';
+          }
+        }
+      }
+
+      if (description.trim()) {
+        keyword.fullDescription = description.trim();
+      }
+
+      if (examples.length > 0) {
+        keyword.examples = examples;
+      }
+
+      if (keyword.name) {
+        keywords.push(keyword);
+      }
+    }
+
+    return keywords;
+  } catch (error) {
+    console.error('Error parsing keywords:', error);
+    return [];
+  }
+};
+
+// Search for a keyword
+const searchKeyword = (query) => {
+  const keywords = parseKeywordsFromMarkdown();
+  const searchTerm = query.toUpperCase().trim();
+
+  // Exact match
+  let match = keywords.find(k => k.name.toUpperCase() === searchTerm);
+
+  // Check aliases
+  if (!match) {
+    match = keywords.find(k =>
+      k.aliases && k.aliases.some(a => a.toUpperCase() === searchTerm)
+    );
+  }
+
+  // Partial match
+  if (!match) {
+    match = keywords.find(k => k.name.toUpperCase().includes(searchTerm));
+  }
+
+  return match;
+};
+
 // 1. HEALTH CHECK SERVER (Required for Koyeb)
 // Koyeb needs to see a "website" running on port 8080 or it will restart the bot.
 const app = express();
@@ -229,15 +353,22 @@ bot.onText(/^\/help$/, (msg) => {
     `   \`/parse IF(GRADE="01",7500000,0) | GRADE='01'\`\n` +
     `   \`/parse SALARY*0.7 | SALARY=10000000\`\n\n` +
 
-    `8️⃣ */clear*\n` +
+    `8️⃣ */ask keyword*\n` +
+    `   Search payroll formula documentation\n` +
+    `   _Examples:_\n` +
+    `   \`/ask BASE\` - Get info about BASE keyword\n` +
+    `   \`/ask JOINDATE\` - Employee join date\n` +
+    `   \`/ask OTRD_FULL\` - Overtime calculations\n\n` +
+
+    `9️⃣ */clear*\n` +
     `   Delete all bot messages in this chat\n` +
     `   _Example:_ \`/clear\`\n\n` +
 
-    `9️⃣ */holiday*\n` +
+    `🔟 */holiday*\n` +
     `   Check Indonesian public holidays\n` +
     `   _Example:_ \`/holiday\`\n\n` +
 
-    `🔟 */sfgo[number]*\n` +
+    `1️⃣1️⃣ */sfgo[number]*\n` +
     `   Auto-format SFGO numbers\n` +
     `   _Example:_ \`/sfgo11199\`\n` +
     `   _Result:_ \`sfgo11199-dev-gd|http://localhost:3001\`\n\n` +
@@ -444,6 +575,87 @@ bot.onText(/^\/reset(?:\s+(.+))?$/, async (msg, match) => {
       .then(msg => trackMessage(msg.chat.id, msg.message_id))
       .catch(err => console.error("Error sending error message:", err));
   }
+});
+
+// ==================== ASK COMMAND: DOCUMENTATION SEARCH ====================
+bot.onText(/^\/ask(?:\s+(.+))?$/, async (msg, match) => {
+  trackCommand(msg.chat.id, msg.message_id);
+
+  const query = match[1];
+
+  if (!query) {
+    return bot.sendMessage(msg.chat.id,
+      "❓ *Ask about formula keywords*\n\n" +
+      "*Usage:*\n`/ask KEYWORD`\n\n" +
+      "*Examples:*\n" +
+      "`/ask BASE`\n" +
+      "`/ask JOINDATE`\n" +
+      "`/ask OTRD_FULL`\n" +
+      "`/ask @COMPONENT_CODE`",
+      { parse_mode: 'Markdown' }
+    );
+  }
+
+  const keyword = searchKeyword(query);
+
+  if (!keyword) {
+    return bot.sendMessage(msg.chat.id,
+      `❌ Keyword "${query}" not found.\n\n` +
+      "Try:\n" +
+      "• Check spelling\n" +
+      "• Use uppercase (e.g., BASE, JOINDATE)\n" +
+      "• Try `/ask` without parameters to see usage",
+      { parse_mode: 'Markdown' }
+    );
+  }
+
+  // Build response
+  let response = `📘 *${keyword.name}*\n\n`;
+
+  // Add category
+  if (keyword.category) {
+    response += `*Category:* ${keyword.category}\n`;
+  }
+
+  // Add syntax
+  if (keyword.syntax) {
+    response += `*Syntax:* \`${keyword.syntax}\`\n\n`;
+  }
+
+  // Add description
+  if (keyword.description) {
+    response += `*Description:*\n${keyword.description}\n\n`;
+  } else if (keyword.fullDescription) {
+    const desc = keyword.fullDescription.substring(0, 300);
+    response += `*Description:*\n${desc}${keyword.fullDescription.length > 300 ? '...' : ''}\n\n`;
+  }
+
+  // Add examples (limit to 2)
+  if (keyword.examples && keyword.examples.length > 0) {
+    response += `*Example Usage:*\n`;
+    const examplesLimit = Math.min(2, keyword.examples.length);
+    for (let i = 0; i < examplesLimit; i++) {
+      const ex = keyword.examples[i];
+      response += `\n${i + 1}. *${ex.title}*\n`;
+      if (ex.formula) {
+        response += `   Formula: \`${ex.formula}\`\n`;
+      }
+      if (ex.description) {
+        response += `   ${ex.description}\n`;
+      }
+    }
+  }
+
+  // Add aliases
+  if (keyword.aliases && keyword.aliases.length > 0) {
+    response += `\n*Aliases:* ${keyword.aliases.join(', ')}`;
+  }
+
+  bot.sendMessage(msg.chat.id, response, { parse_mode: 'Markdown' })
+    .catch(err => {
+      console.error("Error sending keyword info:", err);
+      bot.sendMessage(msg.chat.id, "Error displaying keyword information.");
+    });
 });
 
 // ==================== NEW ENHANCEMENT: FORMULA CALCULATOR ====================
