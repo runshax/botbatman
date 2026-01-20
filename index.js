@@ -745,10 +745,10 @@ bot.onText(/^\/keywords(?:\s+(.+))?$/, async (msg, match) => {
 });
 
 // ==================== NEW ENHANCEMENT: FORMULA CALCULATOR ====================
-bot.onText(/^\/parse(?:\s+(.+))?$/, async (msg, match) => {
+bot.onText(/^\/parse(?:\s+(.+))?$/s, async (msg, match) => {
   trackCommand(msg.chat.id, msg.message_id);
   try {
-    const formula = match[1];
+    let formula = match[1];
 
     // Check if formula is provided
     if (!formula) {
@@ -767,6 +767,9 @@ bot.onText(/^\/parse(?:\s+(.+))?$/, async (msg, match) => {
         .then(m => trackMessage(m.chat.id, m.message_id))
         .catch(err => console.error("Error sending parse help:", err));
     }
+
+    // Clean up multi-line formulas: remove line breaks and extra spaces
+    formula = formula.replace(/\n/g, '').replace(/\s+/g, ' ').trim();
 
     // Check if formula contains variables (format: /parse formula | VAR1=value | VAR2=value)
     let actualFormula = formula;
@@ -799,8 +802,6 @@ bot.onText(/^\/parse(?:\s+(.+))?$/, async (msg, match) => {
 
     // If there are missing variables, ask user to provide values
     if (missingVars.length > 0) {
-      const formattedFormula = formatFormula(actualFormula);
-
       // Store the pending formula
       pendingFormulas.set(msg.chat.id, {
         formula: actualFormula,
@@ -814,7 +815,6 @@ bot.onText(/^\/parse(?:\s+(.+))?$/, async (msg, match) => {
 
       return bot.sendMessage(msg.chat.id,
         `⚠️ *Variables detected!*\n\n` +
-        `*Formatted Formula:*\n\`\`\`\n${formattedFormula}\n\`\`\`\n\n` +
         `*Missing values for:* ${missingVars.join(', ')}\n\n` +
         `*Please reply with variable values:*\n` +
         `Format: \`${exampleValues}\`\n\n` +
