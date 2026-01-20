@@ -621,6 +621,12 @@ bot.on('message', async (msg) => {
         .catch(err => console.error("Error:", err));
     }
 
+    // Check if message looks like variable assignment (contains = or |)
+    if (!userInput.includes('=') && !userInput.includes('|')) {
+      // Not a variable assignment, just ignore and let user continue chatting
+      return;
+    }
+
     // Parse variable assignments from user input
     const variableValues = {};
     const assignments = userInput.split('|').map(p => p.trim());
@@ -637,6 +643,11 @@ bot.on('message', async (msg) => {
         }
         variableValues[varName] = value;
       }
+    }
+
+    // If no valid variable assignments found, ignore
+    if (Object.keys(variableValues).length === 0) {
+      return;
     }
 
     // Check if all required variables are provided
