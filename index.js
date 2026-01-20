@@ -603,41 +603,41 @@ bot.onText(/^\/ask(?:\s+(.+))?$/, async (msg, match) => {
 
     // No parameter - show all categories
     if (!query) {
-    const categorized = {};
-    keywords.forEach(kw => {
-      const cat = kw.category || 'UNCATEGORIZED';
-      if (!categorized[cat]) {
-        categorized[cat] = [];
+      const categorized = {};
+      keywords.forEach(kw => {
+        const cat = kw.category || 'UNCATEGORIZED';
+        if (!categorized[cat]) {
+          categorized[cat] = [];
+        }
+        categorized[cat].push(kw.name);
+      });
+
+      const categoryDescriptions = {
+        'ATTINTF': 'Attendance integration (overtime, work hours)',
+        'ATTSTATUS': 'Attendance status tracking',
+        'DEFFORM': 'Built-in functions (IF, SUM, DATEDIFF, etc.)',
+        'EMPDATA': 'Employee master data',
+        'EMPFORM': 'Employee data (join date, service length)',
+        'PAYFORM': 'Component codes (AL_001, SALARY), BASE, @CODE for cross-reference',
+        'PAYVAR': 'Pay variables'
+      };
+
+      let response = `📚 *Formula Keywords*\n\n`;
+      response += `Total: ${keywords.length} keywords\n\n`;
+
+      const sortedCategories = Object.keys(categorized).sort();
+      for (const cat of sortedCategories) {
+        const desc = categoryDescriptions[cat] || '';
+        response += `*${cat}* (${categorized[cat].length})\n`;
+        response += `${desc}\n\n`;
       }
-      categorized[cat].push(kw.name);
-    });
 
-    const categoryDescriptions = {
-      'ATTINTF': 'Attendance integration (overtime, work hours)',
-      'ATTSTATUS': 'Attendance status tracking',
-      'DEFFORM': 'Built-in functions (IF, SUM, DATEDIFF, etc.)',
-      'EMPDATA': 'Employee master data',
-      'EMPFORM': 'Employee data (join date, service length)',
-      'PAYFORM': 'Component codes (AL_001, SALARY), BASE, @CODE for cross-reference',
-      'PAYVAR': 'Pay variables'
-    };
-
-    let response = `📚 *Formula Keywords*\n\n`;
-    response += `Total: ${keywords.length} keywords\n\n`;
-
-    const sortedCategories = Object.keys(categorized).sort();
-    for (const cat of sortedCategories) {
-      const desc = categoryDescriptions[cat] || '';
-      response += `*${cat}* (${categorized[cat].length})\n`;
-      response += `${desc}\n\n`;
-    }
-
-    response += `*How to use:*\n`;
-    response += `Type: \`/ask ATTINTF\` to see all keywords\n\n`;
-    response += `*Try these:*\n`;
-    response += `\`/ask PAYFORM\`\n`;
-    response += `\`/ask DEFFORM\`\n`;
-    response += `\`/ask ATTINTF\``;
+      response += `*How to use:*\n`;
+      response += `Type: \`/ask ATTINTF\` to see all keywords\n\n`;
+      response += `*Try these:*\n`;
+      response += `\`/ask PAYFORM\`\n`;
+      response += `\`/ask DEFFORM\`\n`;
+      response += `\`/ask ATTINTF\``;
 
       return bot.sendMessage(msg.chat.id, response, { parse_mode: 'Markdown' })
         .then(m => trackMessage(m.chat.id, m.message_id))
