@@ -650,18 +650,18 @@ bot.onText(/^\/ask(?:\s+(.+))?$/, async (msg, match) => {
 
     // Get category description
     const categoryDescriptions = {
-      'ATTINTF': 'Keywords used in attendance integration (overtime, work hours)',
-      'ATTSTATUS': 'Keywords for attendance status tracking',
-      'COMPCODE': 'Component code references',
-      'DEFFORM': 'Built-in functions (IF, SUM, DATEDIFF, etc.)',
-      'EMPDATA': 'Employee master data (name, position, grade)',
-      'EMPFORM': 'Employee data (join date, service length, etc.)',
-      'PAYFORM': 'Payroll formula keywords for calculations',
-      'PAYVAR': 'Pay variables'
+      'ATTINTF': 'Attendance integration keywords - Returns numbers for overtime and work hours',
+      'ATTSTATUS': 'Attendance status tracking - Returns numbers for days worked, absences, etc.',
+      'COMPCODE': 'Dynamic component codes (e.g., AL_001, SALARY) - Returns component value (number)',
+      'DEFFORM': 'Built-in functions for formulas (IF, SUM, DATEDIFF, ROUND, etc.)',
+      'EMPDATA': 'Employee master data fields - Returns text values (name, position, grade)',
+      'EMPFORM': 'Employee date fields (JOINDATE, etc.) - Returns dates or numbers',
+      'PAYFORM': 'Payroll calculation keywords - BASE returns component value, others for proration',
+      'PAYVAR': 'Pay period variables - Returns values for current pay period'
     };
 
     let response = `📚 *${matchedCategory}* (${kwNames.length} keywords)\n`;
-    response += `${categoryDescriptions[matchedCategory] || ''}\n\n`;
+    response += `_${categoryDescriptions[matchedCategory] || ''}_\n\n`;
 
     // Get full keyword objects with descriptions
     const kwObjects = kwNames.map(name =>

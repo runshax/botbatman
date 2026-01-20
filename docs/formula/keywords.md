@@ -24,7 +24,7 @@ category: PAYFORM
 subcategory: Special Keywords
 data_type: DYNAMIC
 syntax: BASE
-description: References the current component's base value for calculations
+description: Returns the current component's base value (number). The basic value of the component being calculated
 module: PAYROLL
 taxcountry: null
 examples:
