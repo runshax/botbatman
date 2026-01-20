@@ -13,6 +13,75 @@ initDatabase();
 // Store message IDs for deletion
 const botMessages = new Map(); // chatId -> array of messageIds
 
+// Store pending formulas waiting for variable values
+const pendingFormulas = new Map(); // chatId -> {formula, variables}
+
+// Helper function to format complex formulas for readability
+const formatFormula = (formula) => {
+  let formatted = formula;
+  let indentLevel = 0;
+  let result = '';
+  let i = 0;
+
+  while (i < formatted.length) {
+    const char = formatted[i];
+
+    if (char === '(') {
+      result += char + '\n';
+      indentLevel++;
+      result += '  '.repeat(indentLevel);
+    } else if (char === ')') {
+      indentLevel--;
+      result += '\n' + '  '.repeat(indentLevel) + char;
+    } else if (char === ',') {
+      result += char + '\n' + '  '.repeat(indentLevel);
+    } else {
+      result += char;
+    }
+
+    i++;
+  }
+
+  return result.trim();
+};
+
+// Helper function to detect unknown variables in formula
+const detectVariables = (formula) => {
+  // Known functions to exclude
+  const knownFunctions = ['IF', 'SUM', 'MAX', 'MIN', 'AVERAGE', 'ROUND', 'ABS', 'CEILING', 'FLOOR',
+    'DOUBLE', 'TRIPLE', 'OR', 'AND', 'NOT', 'CONCATENATE', 'LEN', 'UPPER', 'LOWER', 'TRIM'];
+
+  // Remove strings in quotes first
+  const formulaWithoutStrings = formula.replace(/"[^"]*"/g, '').replace(/'[^']*'/g, '');
+
+  // Find all word-like tokens that are not numbers or strings
+  const tokens = formulaWithoutStrings.match(/[A-Z_][A-Z0-9_]*/gi) || [];
+
+  // Filter out known functions
+  const variables = [...new Set(tokens.filter(token =>
+    !knownFunctions.includes(token.toUpperCase())
+  ))];
+
+  return variables;
+};
+
+// Helper function to substitute variables in formula
+const substituteVariables = (formula, variableValues) => {
+  let result = formula;
+
+  for (const [varName, value] of Object.entries(variableValues)) {
+    // Check if value is a string (needs quotes) or number
+    const isString = isNaN(value);
+    const replacement = isString ? `"${value}"` : value;
+
+    // Replace all occurrences of the variable
+    const regex = new RegExp(`\\b${varName}\\b`, 'g');
+    result = result.replace(regex, replacement);
+  }
+
+  return result;
+};
+
 // 1. HEALTH CHECK SERVER (Required for Koyeb)
 // Koyeb needs to see a "website" running on port 8080 or it will restart the bot.
 const app = express();
@@ -156,6 +225,9 @@ bot.onText(/^\/help$/, (msg) => {
     `   \`/parse SUM(10,20,30)\`\n` +
     `   \`/parse ROUND(3.14159, 2)\`\n` +
     `   \`/parse MAX(100,50,75)\`\n\n` +
+    `   *With Variables:*\n` +
+    `   \`/parse IF(GRADE="01",7500000,0) | GRADE='01'\`\n` +
+    `   \`/parse SALARY*0.7 | SALARY=10000000\`\n\n` +
 
     `8️⃣ */clear*\n` +
     `   Delete all bot messages in this chat\n` +
@@ -398,23 +470,103 @@ bot.onText(/^\/parse(?:\s+(.+))?$/, async (msg, match) => {
         .catch(err => console.error("Error sending parse help:", err));
     }
 
-    // Parse the formula
-    const result = parseFormula(formula);
+    // Check if formula contains variables (format: /parse formula | VAR1=value | VAR2=value)
+    let actualFormula = formula;
+    let variableValues = {};
 
-    if (result.success) {
-      // Success - show result
-      bot.sendMessage(msg.chat.id,
-        `✅ *Result:* \`${result.result}\`\n\n` +
-        `Formula: \`${formula}\``,
+    if (formula.includes('|')) {
+      const parts = formula.split('|').map(p => p.trim());
+      actualFormula = parts[0];
+
+      // Parse variable assignments
+      for (let i = 1; i < parts.length; i++) {
+        const assignment = parts[i].trim();
+        const match = assignment.match(/^([A-Z_][A-Z0-9_]*)\s*=\s*(.+)$/i);
+        if (match) {
+          const varName = match[1];
+          let value = match[2].trim();
+          // Remove quotes if present
+          if ((value.startsWith('"') && value.endsWith('"')) ||
+              (value.startsWith("'") && value.endsWith("'"))) {
+            value = value.slice(1, -1);
+          }
+          variableValues[varName] = value;
+        }
+      }
+    }
+
+    // Detect unknown variables in the formula
+    const detectedVars = detectVariables(actualFormula);
+    const missingVars = detectedVars.filter(v => !(v in variableValues));
+
+    // If there are missing variables, ask user to provide values
+    if (missingVars.length > 0) {
+      const formattedFormula = formatFormula(actualFormula);
+
+      // Store the pending formula
+      pendingFormulas.set(msg.chat.id, {
+        formula: actualFormula,
+        variables: missingVars
+      });
+
+      const exampleValues = missingVars.map((v, i) => {
+        if (i === 0) return `${v}='02'`;
+        return `${v}='Yes'`;
+      }).join(' | ');
+
+      return bot.sendMessage(msg.chat.id,
+        `⚠️ *Variables detected!*\n\n` +
+        `*Formatted Formula:*\n\`\`\`\n${formattedFormula}\n\`\`\`\n\n` +
+        `*Missing values for:* ${missingVars.join(', ')}\n\n` +
+        `*Please reply with variable values:*\n` +
+        `Format: \`${exampleValues}\`\n\n` +
+        `_You can also use the full command:_\n` +
+        `\`/parse ${actualFormula} | ${exampleValues}\`\n\n` +
+        `_Type "cancel" or use any other command to cancel._`,
         { parse_mode: 'Markdown' }
       )
+        .then(m => trackMessage(m.chat.id, m.message_id))
+        .catch(err => console.error("Error:", err));
+    }
+
+    // Substitute variables if provided
+    const formulaWithValues = Object.keys(variableValues).length > 0
+      ? substituteVariables(actualFormula, variableValues)
+      : actualFormula;
+
+    // Parse the formula
+    const result = parseFormula(formulaWithValues);
+
+    if (result.success) {
+      // Format the formula for better readability
+      const formattedOriginal = formatFormula(actualFormula);
+      const formattedWithValues = Object.keys(variableValues).length > 0
+        ? formatFormula(formulaWithValues)
+        : null;
+
+      let response = `✅ *Result:* \`${result.result}\`\n\n`;
+
+      if (Object.keys(variableValues).length > 0) {
+        response += `*Variables:*\n`;
+        for (const [varName, value] of Object.entries(variableValues)) {
+          response += `• ${varName} = \`${value}\`\n`;
+        }
+        response += `\n*Original Formula:*\n\`\`\`\n${formattedOriginal}\n\`\`\`\n\n`;
+        response += `*With Values:*\n\`\`\`\n${formattedWithValues}\n\`\`\``;
+      } else {
+        response += `*Formatted Formula:*\n\`\`\`\n${formattedOriginal}\n\`\`\``;
+      }
+
+      bot.sendMessage(msg.chat.id, response, { parse_mode: 'Markdown' })
         .then(m => trackMessage(m.chat.id, m.message_id))
         .catch(err => console.error("Error sending parse result:", err));
     } else {
       // Error - show error message
+      const formattedFormula = formatFormula(actualFormula);
+
       bot.sendMessage(msg.chat.id,
         `❌ *Formula Error*\n\n` +
-        `*Formula:* \`${formula}\`\n` +
+        `*Formatted Formula:*\n\`\`\`\n${formattedFormula}\n\`\`\`\n` +
         `*Error:* ${result.error}`,
         { parse_mode: 'Markdown' }
       )
@@ -444,6 +596,102 @@ bot.onText(/^\/sfgo(\d+)/i, async (msg, match) => {
 
   } catch (err) {
     console.error("Error in sfgo auto-format:", err);
+  }
+});
+
+// ==================== MESSAGE LISTENER FOR PENDING FORMULAS ====================
+bot.on('message', async (msg) => {
+  // If it's a command (starts with /), clear any pending formulas for this chat
+  if (msg.text && msg.text.startsWith('/')) {
+    if (pendingFormulas.has(msg.chat.id)) {
+      pendingFormulas.delete(msg.chat.id);
+    }
+    return;
+  }
+
+  // Check if user has a pending formula
+  const pending = pendingFormulas.get(msg.chat.id);
+  if (!pending) {
+    return;
+  }
+
+  try {
+    const userInput = msg.text.trim();
+
+    // Check if user wants to cancel
+    if (userInput.toLowerCase() === 'cancel' || userInput.toLowerCase() === 'nevermind') {
+      pendingFormulas.delete(msg.chat.id);
+      return bot.sendMessage(msg.chat.id, '✅ Formula calculation cancelled.')
+        .then(m => trackMessage(m.chat.id, m.message_id))
+        .catch(err => console.error("Error:", err));
+    }
+
+    // Parse variable assignments from user input
+    const variableValues = {};
+    const assignments = userInput.split('|').map(p => p.trim());
+
+    for (const assignment of assignments) {
+      const match = assignment.match(/^([A-Z_][A-Z0-9_]*)\s*=\s*(.+)$/i);
+      if (match) {
+        const varName = match[1];
+        let value = match[2].trim();
+        // Remove quotes if present
+        if ((value.startsWith('"') && value.endsWith('"')) ||
+            (value.startsWith("'") && value.endsWith("'"))) {
+          value = value.slice(1, -1);
+        }
+        variableValues[varName] = value;
+      }
+    }
+
+    // Check if all required variables are provided
+    const missingVars = pending.variables.filter(v => !(v in variableValues));
+
+    if (missingVars.length > 0) {
+      return bot.sendMessage(msg.chat.id,
+        `❌ *Still missing values for:* ${missingVars.join(', ')}\n\n` +
+        `Please provide all variables in format:\n` +
+        `\`${pending.variables.map(v => `${v}=value`).join(' | ')}\``,
+        { parse_mode: 'Markdown' }
+      )
+        .then(m => trackMessage(m.chat.id, m.message_id))
+        .catch(err => console.error("Error:", err));
+    }
+
+    // All variables provided, clear pending and calculate
+    pendingFormulas.delete(msg.chat.id);
+
+    // Substitute variables
+    const formulaWithValues = substituteVariables(pending.formula, variableValues);
+
+    // Parse the formula
+    const result = parseFormula(formulaWithValues);
+
+    if (result.success) {
+      const formattedOriginal = formatFormula(pending.formula);
+      const formattedWithValues = formatFormula(formulaWithValues);
+
+      let response = `✅ *Result:* \`${result.result}\`\n\n`;
+      response += `*Variables:*\n`;
+      for (const [varName, value] of Object.entries(variableValues)) {
+        response += `• ${varName} = \`${value}\`\n`;
+      }
+      response += `\n*Original Formula:*\n\`\`\`\n${formattedOriginal}\n\`\`\`\n\n`;
+      response += `*With Values:*\n\`\`\`\n${formattedWithValues}\n\`\`\``;
+
+      bot.sendMessage(msg.chat.id, response, { parse_mode: 'Markdown' })
+        .then(m => trackMessage(m.chat.id, m.message_id))
+        .catch(err => console.error("Error:", err));
+    } else {
+      bot.sendMessage(msg.chat.id,
+        `❌ *Formula Error*\n\n*Error:* ${result.error}`,
+        { parse_mode: 'Markdown' }
+      )
+        .then(m => trackMessage(m.chat.id, m.message_id))
+        .catch(err => console.error("Error:", err));
+    }
+  } catch (err) {
+    console.error("Error handling pending formula:", err);
   }
 });
 
