@@ -95,76 +95,59 @@ category: PAYFORM
 subcategory: Component References
 data_type: DYNAMIC
 syntax: "COMPONENT_CODE or @COMPONENT_CODE"
-description: Your custom codes (AL_001, SALARY). Direct use gets formula, @CODE gets calculated result. Example: SALARY=BASE*2, BASE=10, then SALARY formula is BASE*2 but @SALARY=20
+description: Use @ to reference another component's calculated value. Example: @SALARY gets the final salary amount to calculate tax.
 module: PAYROLL
 taxcountry: null
 examples:
-  - "SALARY (uses formula BASE*2)"
-  - "@SALARY (gets result 20)"
-  - "AL_001 = @SALARY + @BONUS"
-  - "TAX = @SALARY * 0.10"
+  - "@SALARY * 0.10 (calculate 10% tax on salary)"
+  - "@SALARY + @BONUS (add salary and bonus)"
+  - "AL_001 = @SALARY + @ALLOWANCE"
+  - "TAX = (@SALARY + @BONUS) * 0.15"
 related_keywords:
   - "BASE"
 ---
 
-## @COMPONENT_CODE
+## COMPONENT_CODE
 
 ### Description
-The `@` prefix allows formulas to reference values from other components. This enables cross-component calculations like tax based on multiple income sources. Components using `@` references are processed LAST to ensure all dependencies are calculated first.
+Use `@` before a component code to get its calculated value in your formula. This lets you use one component's result in another component's calculation.
 
-### Syntax
-```
-@COMPONENT_CODE
-```
+**Simple explanation:**
+- Without `@`: SALARY means "use SALARY's formula"
+- With `@`: @SALARY means "use SALARY's final calculated amount"
 
-### Important Notes
-- **Processing Order**: Components with `@` in their formula must have a higher `processOrder` value
-- **Dependencies**: Referenced components must be calculated before dependent components
-- **Two-Phase Processing**: Normal components are processed first, then `@`-dependent components
-
-### Processing Flow
-1. Original formula: `@SALARY * 0.10` (for component "TAX")
-2. System identifies @ reference
-3. SALARY component is calculated first (processOrder = 1)
-4. TAX component is calculated after (processOrder = 2)
-5. @SALARY is replaced with SALARY's value (e.g., 5000)
-6. Formula becomes: `5000 * 0.10`
-7. Result: `500`
-
-### Use Cases
-- Tax calculations based on multiple income components
-- Net pay calculation
-- Deductions based on total income
-- Complex multi-component formulas
+### When to use @
+Use `@` when you need to reference another component's **calculated amount**, like:
+- Calculate tax based on salary amount
+- Add multiple income components together
+- Calculate deductions based on total income
 
 ### Examples
 
-**Example 1: Simple Tax Reference**
+**Example 1: Calculate Tax on Salary**
 ```
-Formula: @SALARY * 0.10
-Component: INCOME_TAX
-Description: 10% tax on salary
-Dependencies: SALARY must be calculated first
-```
-
-**Example 2: Tax on Multiple Income Sources**
-```
-Formula: (@SALARY + @BONUS + @ALLOWANCE) * 0.10
-Component: TOTAL_TAX
-Description: 10% tax on total taxable income
-Dependencies: SALARY, BONUS, ALLOWANCE
-```
-
-**Example 3: Conditional Based on Another Component**
-```
-Formula: IF(@SALARY > 10000, @SALARY * 0.15, @SALARY * 0.10)
 Component: TAX
-Description: Progressive tax rate based on salary
+Formula: @SALARY * 0.10
+What it does: Takes 10% of the final salary amount
+If SALARY = 5000, then TAX = 500
 ```
 
-### Related Keywords
-- `BASE` - Current component reference
-- `processOrder` - Controls calculation sequence
+**Example 2: Add Multiple Incomes**
+```
+Component: TOTAL_INCOME
+Formula: @SALARY + @BONUS + @ALLOWANCE
+What it does: Adds all income amounts together
+```
+
+**Example 3: Progressive Tax Rate**
+```
+Component: TAX
+Formula: IF(@SALARY > 10000, @SALARY * 0.15, @SALARY * 0.10)
+What it does: 15% tax if salary over 10,000, otherwise 10% tax
+```
+
+### Important Note
+Components that use `@` are calculated AFTER the components they reference. The system handles this automatically.
 
 ---
 
