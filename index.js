@@ -663,11 +663,11 @@ bot.onText(/^\/ask(?:\s+(.+))?$/, async (msg, match) => {
       }
 
       response += `*How to use:*\n`;
-      response += `Type: \`/ask ATTINTF\` to see all keywords\n\n`;
-      response += `*Try these:*\n`;
-      response += `\`/ask PAYFORM\`\n`;
-      response += `\`/ask DEFFORM\`\n`;
-      response += `\`/ask ATTINTF\``;
+      response += `Type /ask CATEGORY to see keywords\n\n`;
+      response += `*Examples:*\n`;
+      response += `/ask PAYFORM\n`;
+      response += `/ask DEFFORM\n`;
+      response += `/ask ATTINTF`;
 
       return bot.sendMessage(msg.chat.id, response, { parse_mode: 'Markdown' })
         .then(m => trackMessage(m.chat.id, m.message_id))
