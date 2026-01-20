@@ -652,24 +652,24 @@ bot.onText(/^\/ask(?:\s+(.+))?$/, async (msg, match) => {
         'PAYVAR': 'Pay variables'
       };
 
-      let response = `📚 *Formula Keywords*\n\n`;
+      let response = `📚 <b>Formula Keywords</b>\n\n`;
       response += `Total: ${keywords.length} keywords\n\n`;
 
       const sortedCategories = Object.keys(categorized).sort();
       for (const cat of sortedCategories) {
         const desc = categoryDescriptions[cat] || '';
-        response += `*${cat}* (${categorized[cat].length})\n`;
+        response += `<b>${cat}</b> (${categorized[cat].length})\n`;
         response += `${desc}\n\n`;
       }
 
-      response += `*How to use:*\n`;
+      response += `<b>How to use:</b>\n`;
       response += `Type /ask CATEGORY to see keywords\n\n`;
-      response += `*Examples:*\n`;
+      response += `<b>Examples:</b>\n`;
       response += `/ask PAYFORM\n`;
       response += `/ask DEFFORM\n`;
       response += `/ask ATTINTF`;
 
-      return bot.sendMessage(msg.chat.id, response, { parse_mode: 'Markdown' })
+      return bot.sendMessage(msg.chat.id, response, { parse_mode: 'HTML' })
         .then(m => trackMessage(m.chat.id, m.message_id))
         .catch(err => console.error("Error sending categories:", err));
     }
@@ -704,8 +704,8 @@ bot.onText(/^\/ask(?:\s+(.+))?$/, async (msg, match) => {
         'PAYVAR': 'Pay period variables - Returns values for current pay period'
       };
 
-      let response = `📚 *${matchedCategory}* (${kwNames.length} keywords)\n`;
-      response += `_${categoryDescriptions[matchedCategory] || ''}_\n\n`;
+      let response = `📚 <b>${matchedCategory}</b> (${kwNames.length} keywords)\n`;
+      response += `<i>${categoryDescriptions[matchedCategory] || ''}</i>\n\n`;
 
       // Get full keyword objects with descriptions
       const kwObjects = kwNames.map(name =>
@@ -713,7 +713,7 @@ bot.onText(/^\/ask(?:\s+(.+))?$/, async (msg, match) => {
       ).filter(k => k);
 
       for (const kw of kwObjects) {
-        response += `*${kw.name}*\n`;
+        response += `<b>${kw.name}</b>\n`;
         if (kw.description) {
           const shortDesc = kw.description.length > 80
             ? kw.description.substring(0, 80) + '...'
@@ -723,19 +723,19 @@ bot.onText(/^\/ask(?:\s+(.+))?$/, async (msg, match) => {
 
         // Add first YAML example if available
         if (kw.yamlExamples && kw.yamlExamples.length > 0) {
-          response += `_Example:_ \`${kw.yamlExamples[0]}\`\n`;
+          response += `<i>Example:</i> <code>${kw.yamlExamples[0]}</code>\n`;
         }
         response += `\n`;
 
         // Check if response is getting too long (Telegram limit ~4096 chars)
         if (response.length > 3500) {
-          await bot.sendMessage(msg.chat.id, response, { parse_mode: 'Markdown' })
+          await bot.sendMessage(msg.chat.id, response, { parse_mode: 'HTML' })
             .then(m => trackMessage(m.chat.id, m.message_id));
-          response = `📚 *${matchedCategory}* (continued)\n\n`;
+          response = `📚 <b>${matchedCategory}</b> (continued)\n\n`;
         }
       }
 
-      return bot.sendMessage(msg.chat.id, response, { parse_mode: 'Markdown' })
+      return bot.sendMessage(msg.chat.id, response, { parse_mode: 'HTML' })
         .then(m => trackMessage(m.chat.id, m.message_id))
         .catch(err => console.error("Error sending category list:", err));
     }
