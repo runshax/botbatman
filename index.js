@@ -659,9 +659,12 @@ bot.onText(/^\/ask(?:\s+(.+))?$/, async (msg, match) => {
   }
 
   bot.sendMessage(msg.chat.id, response, { parse_mode: 'Markdown' })
+    .then(m => trackMessage(m.chat.id, m.message_id))
     .catch(err => {
       console.error("Error sending keyword info:", err);
-      bot.sendMessage(msg.chat.id, "Error displaying keyword information.");
+      bot.sendMessage(msg.chat.id, "Error displaying keyword information.")
+        .then(m => trackMessage(m.chat.id, m.message_id))
+        .catch(e => console.error("Error sending error message:", e));
     });
 });
 
