@@ -170,9 +170,115 @@ Test commands to verify functionality:
 
 ## Related Commands
 
+- `/keywords` - List all available formula keywords by category
 - `/parse` - Calculate formulas with variables
 - `/help` - Show all available commands
 - `/clear` - Clear bot messages
+
+---
+
+# `/keywords` Command - List All Keywords
+
+## Overview
+The `/keywords` command provides a categorized list of all available formula keywords in the documentation.
+
+## Usage
+
+### Show All Categories
+```
+/keywords
+```
+
+**Response:**
+```
+📚 *Formula Keywords by Category*
+
+Total: 90 keywords
+
+*ATTINTF* (11)
+*ATTSTATUS* (16)
+*COMPCODE* (1)
+*DEFFORM* (28)
+*EMPDATA* (9)
+*EMPFORM* (16)
+*PAYFORM* (8)
+*PAYVAR* (1)
+
+*Usage:*
+• `/keywords` - Show all categories
+• `/keywords CATEGORY` - List keywords in category
+• `/ask KEYWORD` - Get keyword details
+
+*Examples:*
+`/keywords PAYFORM`
+`/keywords EMPFORM`
+`/keywords ATTINTF`
+```
+
+### List Keywords in Specific Category
+```
+/keywords PAYFORM
+```
+
+**Response:**
+```
+📚 *PAYFORM* (8 keywords)
+
+• `@COMPONENT_CODE`
+• `BASE`
+• `COMPONENT_CODE_RESULT`
+• `PRORATECD_CODE`
+• `PRORATEPRS_CODE`
+• `PRORATEWD_CODE`
+• `PRORATEWS_CODE`
+• `YTD_COMPONENT_CODE`
+
+💡 _Use_ `/ask KEYWORD` _to learn more_
+```
+
+## Categories
+
+### PAYFORM (8 keywords)
+Payroll formula keywords for component calculations and cross-references.
+
+### EMPFORM (16 keywords)
+Employee data keywords like join date, termination date, service length.
+
+### DEFFORM (28 keywords)
+Built-in functions like IF, SUM, MAX, DATEDIFF, ROUND, etc.
+
+### ATTINTF (11 keywords)
+Attendance integration keywords for overtime and work hours.
+
+### ATTSTATUS (16 keywords)
+Attendance status keywords for presence tracking.
+
+### EMPDATA (9 keywords)
+Employee master data like name, position, grade, department.
+
+### COMPCODE (1 keyword)
+Component code references.
+
+### PAYVAR (1 keyword)
+Pay variables.
+
+## Features
+
+- **Category Browsing**: View keywords organized by functionality
+- **Quick Reference**: See all available keywords at a glance
+- **Smart Chunking**: Large categories are split into multiple messages
+- **Integration**: Works seamlessly with `/ask` command for details
+
+## Examples
+
+```
+/keywords              # Show all categories
+/keywords PAYFORM      # Payroll formulas
+/keywords EMPFORM      # Employee data
+/keywords DEFFORM      # Built-in functions
+/keywords ATTINTF      # Attendance/overtime
+/keywords overtime     # Partial match works too
+```
 
 ---
 

@@ -353,22 +353,29 @@ bot.onText(/^\/help$/, (msg) => {
     `   \`/parse IF(GRADE="01",7500000,0) | GRADE='01'\`\n` +
     `   \`/parse SALARY*0.7 | SALARY=10000000\`\n\n` +
 
-    `8️⃣ */ask keyword*\n` +
+    `8️⃣ */keywords*\n` +
+    `   List all available formula keywords by category\n` +
+    `   _Examples:_\n` +
+    `   \`/keywords\` - Show all categories\n` +
+    `   \`/keywords PAYFORM\` - Show payroll keywords\n` +
+    `   \`/keywords EMPFORM\` - Show employee keywords\n\n` +
+
+    `9️⃣ */ask keyword*\n` +
     `   Search payroll formula documentation\n` +
     `   _Examples:_\n` +
     `   \`/ask BASE\` - Get info about BASE keyword\n` +
     `   \`/ask JOINDATE\` - Employee join date\n` +
     `   \`/ask OTRD_FULL\` - Overtime calculations\n\n` +
 
-    `9️⃣ */clear*\n` +
+    `🔟 */clear*\n` +
     `   Delete all bot messages in this chat\n` +
     `   _Example:_ \`/clear\`\n\n` +
 
-    `🔟 */holiday*\n` +
+    `1️⃣1️⃣ */holiday*\n` +
     `   Check Indonesian public holidays\n` +
     `   _Example:_ \`/holiday\`\n\n` +
 
-    `1️⃣1️⃣ */sfgo[number]*\n` +
+    `1️⃣2️⃣ */sfgo[number]*\n` +
     `   Auto-format SFGO numbers\n` +
     `   _Example:_ \`/sfgo11199\`\n` +
     `   _Result:_ \`sfgo11199-dev-gd|http://localhost:3001\`\n\n` +
@@ -656,6 +663,85 @@ bot.onText(/^\/ask(?:\s+(.+))?$/, async (msg, match) => {
       console.error("Error sending keyword info:", err);
       bot.sendMessage(msg.chat.id, "Error displaying keyword information.");
     });
+});
+
+// ==================== KEYWORDS LIST COMMAND ====================
+bot.onText(/^\/keywords(?:\s+(.+))?$/, async (msg, match) => {
+  trackCommand(msg.chat.id, msg.message_id);
+
+  const category = match[1] ? match[1].toUpperCase().trim() : null;
+
+  const keywords = parseKeywordsFromMarkdown();
+
+  if (keywords.length === 0) {
+    return bot.sendMessage(msg.chat.id, "❌ No keywords found in documentation.");
+  }
+
+  // Group keywords by category
+  const categorized = {};
+  keywords.forEach(kw => {
+    const cat = kw.category || 'UNCATEGORIZED';
+    if (!categorized[cat]) {
+      categorized[cat] = [];
+    }
+    categorized[cat].push(kw.name);
+  });
+
+  // If specific category requested
+  if (category) {
+    const matchedCategory = Object.keys(categorized).find(cat =>
+      cat.toUpperCase() === category || cat.toUpperCase().includes(category)
+    );
+
+    if (!matchedCategory) {
+      return bot.sendMessage(msg.chat.id,
+        `❌ Category "${category}" not found.\n\n` +
+        `*Available categories:*\n${Object.keys(categorized).sort().join('\n')}\n\n` +
+        `Use \`/keywords CATEGORY\` to see keywords in that category.`,
+        { parse_mode: 'Markdown' }
+      );
+    }
+
+    const kwList = categorized[matchedCategory].sort();
+    let response = `📚 *${matchedCategory}* (${kwList.length} keywords)\n\n`;
+
+    // Split into chunks if too many
+    const chunkSize = 30;
+    for (let i = 0; i < kwList.length; i += chunkSize) {
+      const chunk = kwList.slice(i, i + chunkSize);
+      response += chunk.map(kw => `• \`${kw}\``).join('\n') + '\n';
+
+      if (i + chunkSize < kwList.length) {
+        response += `\n_...continued in next message_\n`;
+        bot.sendMessage(msg.chat.id, response, { parse_mode: 'Markdown' });
+        response = `📚 *${matchedCategory}* (continued)\n\n`;
+      }
+    }
+
+    response += `\n💡 _Use_ \`/ask KEYWORD\` _to learn more_`;
+    return bot.sendMessage(msg.chat.id, response, { parse_mode: 'Markdown' });
+  }
+
+  // Show all categories with counts
+  let response = `📚 *Formula Keywords by Category*\n\n`;
+  response += `Total: ${keywords.length} keywords\n\n`;
+
+  const sortedCategories = Object.keys(categorized).sort();
+  for (const cat of sortedCategories) {
+    response += `*${cat}* (${categorized[cat].length})\n`;
+  }
+
+  response += `\n*Usage:*\n`;
+  response += `• \`/keywords\` - Show all categories\n`;
+  response += `• \`/keywords CATEGORY\` - List keywords in category\n`;
+  response += `• \`/ask KEYWORD\` - Get keyword details\n\n`;
+  response += `*Examples:*\n`;
+  response += `\`/keywords PAYFORM\`\n`;
+  response += `\`/keywords EMPFORM\`\n`;
+  response += `\`/keywords ATTINTF\``;
+
+  bot.sendMessage(msg.chat.id, response, { parse_mode: 'Markdown' })
+    .catch(err => console.error("Error sending keywords list:", err));
 });
 
 // ==================== NEW ENHANCEMENT: FORMULA CALCULATOR ====================
