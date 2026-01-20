@@ -33,7 +33,6 @@ examples:
   - "ROUND(BASE * 0.12, 2)"
 related_keywords:
   - "@COMPONENT_CODE"
-  - "COMPONENT_CODE_RESULT"
 ---
 
 ## BASE
@@ -84,7 +83,6 @@ Description: Calculate 12% and round to 2 decimal places
 
 ### Related Keywords
 - `@COMPONENT_CODE` - Reference other components
-- `COMPONENT_CODE_RESULT` - Reference calculated results
 
 ---
 
@@ -107,7 +105,6 @@ examples:
   - "TAX = @SALARY * 0.10"
 related_keywords:
   - "BASE"
-  - "COMPONENT_CODE_RESULT"
 ---
 
 ## @COMPONENT_CODE
@@ -167,80 +164,7 @@ Description: Progressive tax rate based on salary
 
 ### Related Keywords
 - `BASE` - Current component reference
-- `COMPONENT_CODE_RESULT` - Reference calculated results
 - `processOrder` - Controls calculation sequence
-
----
-
----
-keyword: "COMPONENT_CODE_RESULT"
-aliases:
-  - "_RESULT"
-  - "Result Reference"
-category: PAYFORM
-subcategory: Special Keywords
-data_type: DYNAMIC
-syntax: "COMPONENT_CODE_RESULT"
-description: References the calculated result (final value) of another component after formula execution
-module: PAYROLL
-taxcountry: null
-examples:
-  - "SALARY_RESULT + BONUS_RESULT"
-  - "(SALARY_RESULT + ALLOWANCE_RESULT) - TAX_RESULT"
-  - "IF(SALARY_RESULT > 10000, 1000, 0)"
-related_keywords:
-  - "BASE"
-  - "@COMPONENT_CODE"
-  - "formulaStatus"
----
-
-## COMPONENT_CODE_RESULT
-
-### Description
-The `_RESULT` suffix references the final calculated result of another component. Unlike `@COMPONENT_CODE` which references the base value, `_RESULT` uses the value after all formula calculations have been applied.
-
-### Syntax
-```
-COMPONENT_CODE_RESULT
-```
-
-### Processing Logic
-- If component has `formulaStatus = 'Y'`: Uses the formula expression itself
-- If component has `formulaStatus = 'N'`: Uses the encrypted result value (decrypted during processing)
-
-### Use Cases
-- Net pay calculation from multiple calculated components
-- Accumulating multiple calculated results
-- Conditional logic based on calculated values
-- Complex multi-step calculations
-
-### Examples
-
-**Example 1: Net Pay Calculation**
-```
-Formula: (SALARY_RESULT + ALLOWANCE_RESULT) - (TAX_RESULT + DEDUCTION_RESULT)
-Component: NET_PAY
-Description: Calculate net pay from all calculated components
-```
-
-**Example 2: Simple Addition**
-```
-Formula: SALARY_RESULT + BONUS_RESULT
-Component: TOTAL_INCOME
-Description: Sum of calculated salary and bonus
-```
-
-**Example 3: Conditional Based on Result**
-```
-Formula: IF(SALARY_RESULT > 10000, 1000, 0)
-Component: HIGH_EARNER_BONUS
-Description: Bonus if calculated salary exceeds threshold
-```
-
-### Related Keywords
-- `BASE` - Current component base value
-- `@COMPONENT_CODE` - Reference other component values
-- `formulaStatus` - Indicates if component uses formula
 
 ---
 
