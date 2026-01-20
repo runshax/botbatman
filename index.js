@@ -546,12 +546,16 @@ bot.onText(/^\/dev(?:\s+(.+))?$/, async (msg, match) => {
   } else {
     // No country specified - show all from database only
     const dbCreds = await getAllCredentials();
+
+    // Sort by country
+    dbCreds.sort((a, b) => a.country.localeCompare(b.country));
+
     const allCreds = [];
 
-    // Add database credentials
+    // Add database credentials with username
     for (const cred of dbCreds) {
       const sfgoOnly = cred.sfgo.split('|')[0].replace('-dev-gd', '');
-      allCreds.push(`🌐 ${cred.country.toUpperCase()}\n${sfgoOnly}`);
+      allCreds.push(`🌐 ${cred.country.toUpperCase()}\n${cred.username}\n${sfgoOnly}`);
     }
 
     if (allCreds.length > 0) {
