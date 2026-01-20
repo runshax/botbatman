@@ -4452,11 +4452,11 @@ keyword: "COMPONENT_CODES"
 aliases:
   - "User-Defined Components"
   - "SALARY, BONUS, ALLOWANCE, etc."
-category: COMPCODE
+category: PAYFORM
 subcategory: Dynamic Component Codes
 data_type: DYNAMIC
 syntax: "COMPONENT_CODE"
-description: Component codes you create (AL_001, SALARY, etc). Use @COMPONENT_CODE to get calculated result. Example SALARY formula BASE*2, if BASE=10 then @SALARY=20
+description: Your custom component codes (AL_001, SALARY, etc). Use @CODE in formulas to get calculated result. Example: SALARY=BASE*2, if BASE=10 then @SALARY=20
 module: PAYROLL
 taxcountry: null
 examples:

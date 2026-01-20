@@ -607,11 +607,10 @@ bot.onText(/^\/ask(?:\s+(.+))?$/, async (msg, match) => {
     const categoryDescriptions = {
       'ATTINTF': 'Attendance integration (overtime, work hours)',
       'ATTSTATUS': 'Attendance status tracking',
-      'COMPCODE': 'Component codes (AL_001, SALARY). Use @CODE to get result',
       'DEFFORM': 'Built-in functions (IF, SUM, DATEDIFF, etc.)',
       'EMPDATA': 'Employee master data',
       'EMPFORM': 'Employee data (join date, service length)',
-      'PAYFORM': 'Special keywords - @COMPONENT_CODE for cross-reference, BASE for component value',
+      'PAYFORM': 'Component codes (AL_001, SALARY), BASE, @CODE for cross-reference',
       'PAYVAR': 'Pay variables'
     };
 
@@ -660,11 +659,10 @@ bot.onText(/^\/ask(?:\s+(.+))?$/, async (msg, match) => {
     const categoryDescriptions = {
       'ATTINTF': 'Attendance integration keywords - Returns numbers for overtime and work hours',
       'ATTSTATUS': 'Attendance status tracking - Returns numbers for days worked, absences, etc.',
-      'COMPCODE': 'Component codes you create (AL_001, SALARY, etc). To get calculated result use @SALARY. Example: SALARY=BASE*2, if BASE=10 then @SALARY=20',
       'DEFFORM': 'Built-in functions for formulas (IF, SUM, DATEDIFF, ROUND, etc.)',
       'EMPDATA': 'Employee master data fields - Returns text values (name, position, grade)',
       'EMPFORM': 'Employee date fields (JOINDATE, etc.) - Returns dates or numbers',
-      'PAYFORM': 'Special formula keywords: BASE (current component value), @COMPONENT_CODE (cross-reference), proration keywords',
+      'PAYFORM': 'Component codes (AL_001, SALARY), BASE (component value), @CODE (get calculated result). Example: SALARY=BASE*2, BASE=10, then @SALARY=20',
       'PAYVAR': 'Pay period variables - Returns values for current pay period'
     };
 
