@@ -745,10 +745,12 @@ bot.onText(/^\/keywords(?:\s+(.+))?$/, async (msg, match) => {
 });
 
 // ==================== NEW ENHANCEMENT: FORMULA CALCULATOR ====================
-bot.onText(/^\/parse(?:\s+(.+))?$/s, async (msg, match) => {
+bot.onText(/^\/parse/, async (msg) => {
   trackCommand(msg.chat.id, msg.message_id);
   try {
-    let formula = match[1];
+    // Extract formula from message text (everything after /parse)
+    const messageText = msg.text || '';
+    let formula = messageText.replace(/^\/parse\s*/, '').trim();
 
     // Check if formula is provided
     if (!formula) {
