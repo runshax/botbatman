@@ -4456,13 +4456,13 @@ category: COMPCODE
 subcategory: Dynamic Component Codes
 data_type: DYNAMIC
 syntax: "COMPONENT_CODE"
-description: Component codes you create (e.g., AL_001, SALARY, BONUS). Use directly in formulas to get their calculated values (returns number)
+description: Component codes you create (AL_001, SALARY, etc). Use @COMPONENT_CODE to get calculated result. Example SALARY formula BASE*2, if BASE=10 then @SALARY=20
 module: PAYROLL
 taxcountry: null
 examples:
-  - "SALARY"
-  - "BONUS"
-  - "ALLOWANCE_001"
+  - "AL_001 = SALARY (gets SALARY result)"
+  - "@SALARY (gets calculated value, e.g., 20)"
+  - "AL_002 = @SALARY + @BONUS"
   - "OVERTIME_PAY"
   - "TAX"
   - "DEDUCTION_INSURANCE"
