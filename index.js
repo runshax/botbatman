@@ -607,11 +607,11 @@ bot.onText(/^\/ask(?:\s+(.+))?$/, async (msg, match) => {
     const categoryDescriptions = {
       'ATTINTF': 'Attendance integration (overtime, work hours)',
       'ATTSTATUS': 'Attendance status tracking',
-      'COMPCODE': 'Component code references',
+      'COMPCODE': 'User-defined component codes (e.g., AL_001, SALARY, BONUS)',
       'DEFFORM': 'Built-in functions (IF, SUM, DATEDIFF, etc.)',
       'EMPDATA': 'Employee master data',
       'EMPFORM': 'Employee data (join date, service length)',
-      'PAYFORM': 'Payroll formula keywords',
+      'PAYFORM': 'Special keywords - @COMPONENT_CODE for cross-reference, BASE for component value',
       'PAYVAR': 'Pay variables'
     };
 
@@ -660,11 +660,11 @@ bot.onText(/^\/ask(?:\s+(.+))?$/, async (msg, match) => {
     const categoryDescriptions = {
       'ATTINTF': 'Attendance integration keywords - Returns numbers for overtime and work hours',
       'ATTSTATUS': 'Attendance status tracking - Returns numbers for days worked, absences, etc.',
-      'COMPCODE': 'Dynamic component codes (e.g., AL_001, SALARY) - Returns component value (number)',
+      'COMPCODE': 'User-defined component codes you create (e.g., AL_001 for allowance, SALARY, BONUS). Use these names directly in formulas to reference their calculated values.',
       'DEFFORM': 'Built-in functions for formulas (IF, SUM, DATEDIFF, ROUND, etc.)',
       'EMPDATA': 'Employee master data fields - Returns text values (name, position, grade)',
       'EMPFORM': 'Employee date fields (JOINDATE, etc.) - Returns dates or numbers',
-      'PAYFORM': 'Payroll calculation keywords - BASE returns component value, others for proration',
+      'PAYFORM': 'Special formula keywords: BASE (current component value), @COMPONENT_CODE (cross-reference), proration keywords',
       'PAYVAR': 'Pay period variables - Returns values for current pay period'
     };
 

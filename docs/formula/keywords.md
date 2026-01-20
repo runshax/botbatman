@@ -4456,7 +4456,7 @@ category: COMPCODE
 subcategory: Dynamic Component Codes
 data_type: DYNAMIC
 syntax: "COMPONENT_CODE"
-description: User-defined component codes that are automatically synchronized from tpympayallowdeduct table
+description: Component codes you create (e.g., AL_001, SALARY, BONUS). Use directly in formulas to get their calculated values (returns number)
 module: PAYROLL
 taxcountry: null
 examples:
