@@ -400,10 +400,8 @@ bot.onText(/^\/help$/, (msg) => {
     `   \`/ask JOINDATE\` - Employee join date info\n\n` +
 
     `9️⃣ */ticket*\n` +
-    `   Get today's tickets from resource planning API\n` +
-    `   _Examples:_\n` +
-    `   \`/ticket\` - Show tickets for default user (jemmy)\n` +
-    `   \`/ticket username\` - Show tickets for specific user\n\n` +
+    `   Get today's tickets grouped by team member\n` +
+    `   _Example:_ \`/ticket\`\n\n` +
 
     `🔟 */clear*\n` +
     `   Delete all bot messages in this chat\n` +
@@ -1090,19 +1088,17 @@ bot.on('message', async (msg) => {
 });
 
 // ==================== TICKET COMMAND ====================
-bot.onText(/^\/ticket(?:\s+(.+))?$/, async (msg, match) => {
+bot.onText(/^\/ticket$/, async (msg) => {
   trackCommand(msg.chat.id, msg.message_id);
 
   try {
-    const username = match[1] ? match[1].trim() : 'jemmy'; // Default username
     const today = new Date();
-    const startDate = today.toISOString().split('T')[0]; // Format: YYYY-MM-DD
-    const endDate = startDate; // Same day for today only
+    const todayStr = today.toISOString().split('T')[0]; // Format: YYYY-MM-DD
 
     const payload = {
-      startDate: startDate,
-      endDate: endDate,
-      username: username,
+      startDate: todayStr,
+      endDate: todayStr,
+      username: 'jemmy', // Always use jemmy to get all team data
       includeTeam: true
     };
 
@@ -1112,8 +1108,7 @@ bot.onText(/^\/ticket(?:\s+(.+))?$/, async (msg, match) => {
       headers: {
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify(payload),
-      timeout: 10000 // 10 second timeout
+      body: JSON.stringify(payload)
     });
 
     if (!response.ok) {
@@ -1126,43 +1121,65 @@ bot.onText(/^\/ticket(?:\s+(.+))?$/, async (msg, match) => {
     if (!data || !data.allocation || data.allocation.length === 0) {
       return bot.sendMessage(msg.chat.id,
         `📋 <b>No Tickets Found</b>\n\n` +
-        `No tickets scheduled for today (${startDate}) for user: ${username}\n\n` +
-        `Use /ticket USERNAME to check for a different user`,
+        `No tickets scheduled for today (${todayStr})`,
         { parse_mode: 'HTML' }
       )
         .then(m => trackMessage(m.chat.id, m.message_id))
         .catch(err => console.error("Error:", err));
     }
 
-    // Filter today's tickets
-    const todayStr = startDate;
-    let responseText = `📋 <b>Today's Tickets (${todayStr})</b>\n`;
-    responseText += `User: ${username}\n\n`;
-
-    let ticketCount = 0;
+    // Group tickets by username
+    const userTickets = new Map();
+    let totalTickets = 0;
 
     for (const allocation of data.allocation) {
       // Check if dates array contains today
       if (allocation.dates && allocation.dates.includes(todayStr)) {
-        ticketCount++;
-        responseText += `<b>${ticketCount}. ${allocation.full_name || 'Unknown'}</b>\n`;
+        const userName = allocation.username || 'unknown';
 
-        if (allocation.resource_id) {
-          responseText += `   ID: ${allocation.resource_id}\n`;
+        if (!userTickets.has(userName)) {
+          userTickets.set(userName, {
+            fullName: allocation.username || userName,
+            tickets: []
+          });
         }
 
-        if (allocation.username) {
-          responseText += `   User: ${allocation.username}\n`;
-        }
-
-        responseText += `\n`;
+        userTickets.get(userName).tickets.push({
+          resourceId: allocation.resource_id,
+          taskName: allocation.full_name || 'Unknown Task'
+        });
+        totalTickets++;
       }
     }
 
-    if (ticketCount === 0) {
-      responseText += `<i>No tickets found for today</i>\n`;
+    // Build response grouped by user
+    let responseText = `📋 <b>Today's Tickets (${todayStr})</b>\n\n`;
+
+    if (totalTickets === 0) {
+      responseText += `<i>No tickets found for today</i>`;
     } else {
-      responseText += `\n<b>Total: ${ticketCount} ticket(s)</b>`;
+      let userCount = 0;
+      const sortedUsers = Array.from(userTickets.entries()).sort((a, b) => a[0].localeCompare(b[0]));
+
+      for (const [userName, userData] of sortedUsers) {
+        if (userData.tickets.length > 0) {
+          userCount++;
+          responseText += `<b>${userCount}. ${userName}</b> (${userData.tickets.length} ticket${userData.tickets.length > 1 ? 's' : ''})\n`;
+
+          for (let i = 0; i < userData.tickets.length; i++) {
+            const ticket = userData.tickets[i];
+            responseText += `   ${i + 1}. ${ticket.taskName}`;
+            if (ticket.resourceId) {
+              responseText += ` (ID: ${ticket.resourceId})`;
+            }
+            responseText += `\n`;
+          }
+
+          responseText += `\n`;
+        }
+      }
+
+      responseText += `<b>Total: ${totalTickets} ticket(s) | ${userCount} user(s)</b>`;
     }
 
     return bot.sendMessage(msg.chat.id, responseText, { parse_mode: 'HTML' })
