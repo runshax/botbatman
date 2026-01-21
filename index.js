@@ -16,6 +16,13 @@ const botMessages = new Map(); // chatId -> array of messageIds
 // Store pending formulas waiting for variable values
 const pendingFormulas = new Map(); // chatId -> {formula, variables}
 
+// Store user Bearer tokens in memory (lost on redeploy)
+// Auto-cleared after 5 minutes of inactivity for security
+const userTokens = new Map(); // userId -> {bearerToken, loginTime, timeoutId}
+
+// Auto-clear credentials after 5 minutes
+const CREDENTIAL_TIMEOUT = 5 * 60 * 1000; // 5 minutes in milliseconds
+
 // Helper function to format complex formulas for readability
 const formatFormula = (formula) => {
   let formatted = formula;
@@ -400,10 +407,14 @@ bot.onText(/^\/help$/, (msg) => {
     `   \`/ask JOINDATE\` - Employee join date info\n\n` +
 
     `9️⃣ */ticket*\n` +
-    `   Get today's tickets grouped by team member\n` +
+    `   Manage and respond to tickets\n` +
     `   _Examples:_\n` +
     `   \`/ticket\` - Show all team tickets\n` +
-    `   \`/ticket me\` - Show only your tickets\n\n` +
+    `   \`/ticket me\` - Show only your tickets\n` +
+    `   \`/ticket res HDTKT-2601-00020563 Bearer eyJ0eXAi...\` - Respond with token\n` +
+    `   \`/ticket res HDTKT-2601-00020563\` - Respond (uses stored token)\n` +
+    `   \`/ticket logout\` - Clear Bearer token\n` +
+    `   🔒 Response feature: Private chat only. Tokens auto-clear after 5 min.\n\n` +
 
     `🔟 */clear*\n` +
     `   Delete all bot messages in this chat\n` +
@@ -1098,11 +1109,212 @@ const telegramToWorkUsername = {
   'rmdhnt6': 'herdiansyah'
 };
 
-bot.onText(/^\/ticket(?:\s+(me))?$/, async (msg, match) => {
+bot.onText(/^\/ticket(?:\s+(.+))?$/, async (msg, match) => {
   trackCommand(msg.chat.id, msg.message_id);
+  const userId = msg.from.id.toString();
+  const input = match[1];
 
   try {
-    const filterMe = match[1] === 'me';
+    // SUBCOMMAND: logout - Clear Bearer token
+    if (input === 'logout') {
+      if (!userTokens.has(userId)) {
+        return bot.sendMessage(msg.chat.id,
+          `❌ You don't have a stored Bearer token`,
+          { parse_mode: 'Markdown' }
+        )
+          .then(m => trackMessage(m.chat.id, m.message_id))
+          .catch(err => console.error("Error:", err));
+      }
+
+      // Clear the auto-clear timer
+      const tokenData = userTokens.get(userId);
+      if (tokenData && tokenData.timeoutId) {
+        clearTimeout(tokenData.timeoutId);
+      }
+
+      userTokens.delete(userId);
+
+      return bot.sendMessage(msg.chat.id,
+        `✅ *Logged out successfully*\n\nBearer token cleared from memory`,
+        { parse_mode: 'Markdown' }
+      )
+        .then(m => trackMessage(m.chat.id, m.message_id))
+        .catch(err => console.error("Error:", err));
+    }
+
+    // SUBCOMMAND: res <ticket_id> [Bearer token] - Respond to ticket
+    if (input && input.startsWith('res ')) {
+      // Check if this is a private chat
+      if (msg.chat.type !== 'private') {
+        return bot.sendMessage(msg.chat.id,
+          `⚠️ *Security Warning*\n\n` +
+          `Please use this command in a private chat with the bot to protect your Bearer token.\n\n` +
+          `Bearer tokens will auto-clear after 5 minutes.`,
+          { parse_mode: 'Markdown' }
+        )
+          .then(m => trackMessage(m.chat.id, m.message_id))
+          .catch(err => console.error("Error:", err));
+      }
+
+      // Validate user has permission (only mapped Telegram users can respond)
+      const telegramUsername = msg.from.username;
+      if (!telegramToWorkUsername[telegramUsername]) {
+        return bot.sendMessage(msg.chat.id,
+          `❌ *Access Denied*\n\n` +
+          `You don't have permission to respond to tickets.\n\n` +
+          `Only authorized team members can use this feature.`,
+          { parse_mode: 'Markdown' }
+        )
+          .then(m => trackMessage(m.chat.id, m.message_id))
+          .catch(err => console.error("Error:", err));
+      }
+
+      const resInput = input.substring(4).trim(); // Remove "res "
+      const parts = resInput.split(/\s+/);
+      const ticketCode = parts[0];
+
+      if (!ticketCode || !ticketCode.startsWith('HDTKT-')) {
+        return bot.sendMessage(msg.chat.id,
+          `❌ *Invalid ticket ID*\n\n` +
+          `Format: \`/ticket res HDTKT-2601-00020563 Bearer eyJ0eXAi...\`\n\n` +
+          `Or use \`/ticket logout\` to clear stored token`,
+          { parse_mode: 'Markdown' }
+        )
+          .then(m => trackMessage(m.chat.id, m.message_id))
+          .catch(err => console.error("Error:", err));
+      }
+
+      // Check if Bearer token is provided in this command
+      let bearerToken = null;
+      if (parts.length >= 2 && parts[1] === 'Bearer') {
+        // Token provided: /ticket res HDTKT-2601-00020563 Bearer eyJ0eXAi...
+        bearerToken = parts.slice(2).join(' ');
+
+        // Clear existing timeout if user is providing new token
+        const existing = userTokens.get(userId);
+        if (existing && existing.timeoutId) {
+          clearTimeout(existing.timeoutId);
+        }
+
+        // Set auto-clear timer (5 minutes)
+        const timeoutId = setTimeout(() => {
+          userTokens.delete(userId);
+          console.log(`[Security] Auto-cleared Bearer token for user ${userId} after 5 minutes of inactivity`);
+        }, CREDENTIAL_TIMEOUT);
+
+        // Store in memory with timeout
+        userTokens.set(userId, {
+          bearerToken: bearerToken,
+          loginTime: new Date(),
+          timeoutId: timeoutId
+        });
+      } else {
+        // No token provided, check if we have one stored
+        const tokenData = userTokens.get(userId);
+
+        if (!tokenData) {
+          return bot.sendMessage(msg.chat.id,
+            `❌ *No Bearer token found*\n\n` +
+            `Please provide your Bearer token:\n` +
+            `/ticket res ${ticketCode} Bearer eyJ0eXAi...\n\n` +
+            `🔒 Token will auto-clear after 5 minutes.`,
+            { parse_mode: 'Markdown' }
+          )
+            .then(m => trackMessage(m.chat.id, m.message_id))
+            .catch(err => console.error("Error:", err));
+        }
+
+        bearerToken = tokenData.bearerToken;
+      }
+
+      // Step 1: GET ticket details to get TASK_ID
+      console.log(`[/ticket res] Fetching ticket details for ${ticketCode}...`);
+      const getResponse = await fetch('https://sf7doffice.dataon.com/hrm-go/v1/helpdesk/myticket/get', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${bearerToken}`,
+          'acc-name': 'indodevniaga',
+          'company-code': 'pii',
+          'company-id': '148',
+          'coid': '148',
+          'language': 'en'
+        },
+        body: JSON.stringify({
+          TASK_CODE: ticketCode
+        })
+      });
+
+      if (!getResponse.ok) {
+        console.log(`[/ticket res] GET failed: ${getResponse.status} ${getResponse.statusText}`);
+        let errorMsg = `API Error: ${getResponse.status} ${getResponse.statusText}`;
+        if (getResponse.status === 401) {
+          errorMsg = 'Authentication failed. Your Bearer token may be expired or invalid.';
+        } else if (getResponse.status === 404) {
+          errorMsg = `Ticket ${ticketCode} not found.`;
+        }
+        throw new Error(errorMsg);
+      }
+
+      const ticketData = await getResponse.json();
+
+      // Extract TASK_ID from response
+      const taskId = ticketData?.DATA?.LIST?.TASK_ID;
+
+      if (!taskId) {
+        console.log(`[/ticket res] Failed to extract TASK_ID from response`);
+        throw new Error(`Unable to get TASK_ID from ticket ${ticketCode}. Response structure may have changed.`);
+      }
+
+      console.log(`[/ticket res] Got TASK_ID: ${taskId} for ticket ${ticketCode}`);
+
+      // Step 2: UPDATE ticket status to "Responded"
+      console.log(`[/ticket res] Updating ticket ${ticketCode} (TASK_ID: ${taskId}) to "Responded"...`);
+      const updateResponse = await fetch('https://sf7doffice.dataon.com/hrm-go/v1/helpdesk/admin/ticket/update', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${bearerToken}`,
+          'acc-name': 'indodevniaga',
+          'company-code': 'pii',
+          'company-id': '148',
+          'coid': '148',
+          'language': 'en'
+        },
+        body: JSON.stringify({
+          STATUS: 'Responded',
+          TASK_ID: taskId
+        })
+      });
+
+      if (!updateResponse.ok) {
+        console.log(`[/ticket res] UPDATE failed: ${updateResponse.status} ${updateResponse.statusText}`);
+        let errorMsg = `Failed to update ticket: ${updateResponse.status} ${updateResponse.statusText}`;
+        if (updateResponse.status === 401) {
+          errorMsg = 'Authentication failed. Your Bearer token may be expired or invalid.';
+        } else if (updateResponse.status === 403) {
+          errorMsg = 'Permission denied. You may not have access to update this ticket.';
+        }
+        throw new Error(errorMsg);
+      }
+
+      const updateResult = await updateResponse.json();
+      console.log(`[/ticket res] ✅ SUCCESS! Ticket ${ticketCode} marked as "Responded"`);
+
+      return bot.sendMessage(msg.chat.id,
+        `✅ *Ticket Responded Successfully*\n\n` +
+        `*Ticket:* ${ticketCode}\n` +
+        `*Task ID:* ${taskId}\n` +
+        `*Status:* Responded\n\n` +
+        `🔒 Bearer token will auto-clear in 5 minutes.`,
+        { parse_mode: 'Markdown' }
+      )
+        .then(m => trackMessage(m.chat.id, m.message_id))
+        .catch(err => console.error("Error:", err));
+    }
+
+    // SUBCOMMAND: me - Show only user's tickets
+    const filterMe = input === 'me';
     let filterUsername = null;
 
     // If "me" is specified, get the user's work username
