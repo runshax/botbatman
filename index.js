@@ -7,6 +7,13 @@ const { getTodayHoliday, getTomorrowHoliday, getUpcomingHolidays, formatDateIndo
 const { initDatabase, addCredential, getCredential, getCredentialBySfgo, getAllCredentials, deleteCredential } = require('./services/database');
 require('dotenv').config();
 
+// Ensure fetch is available (Node.js 18+ has it built-in)
+// For older Node versions or deployment environments, this ensures compatibility
+if (typeof fetch === 'undefined') {
+  console.warn('fetch is not available globally, using node-fetch as fallback');
+  global.fetch = require('node-fetch');
+}
+
 // Initialize database on startup
 initDatabase();
 
@@ -891,7 +898,7 @@ bot.onText(/^\/parse/, async (msg) => {
           let value = match[2].trim();
           // Remove quotes if present
           if ((value.startsWith('"') && value.endsWith('"')) ||
-              (value.startsWith("'") && value.endsWith("'"))) {
+            (value.startsWith("'") && value.endsWith("'"))) {
             value = value.slice(1, -1);
           }
           variableValues[varName] = value;
@@ -1039,7 +1046,7 @@ bot.on('message', async (msg) => {
         let value = match[2].trim();
         // Remove quotes if present
         if ((value.startsWith('"') && value.endsWith('"')) ||
-            (value.startsWith("'") && value.endsWith("'"))) {
+          (value.startsWith("'") && value.endsWith("'"))) {
           value = value.slice(1, -1);
         }
         variableValues[varName] = value;
@@ -1158,7 +1165,22 @@ bot.onText(/^\/ticket(?:\s+(.+))?$/, async (msg, match) => {
 
       // Validate user has permission (only mapped Telegram users can respond)
       const telegramUsername = msg.from.username;
+      console.log(`[/ticket res] Username check: Telegram username = "${telegramUsername}"`);
+
+      if (!telegramUsername) {
+        console.log(`[/ticket res] ERROR: User has no Telegram username set`);
+        return bot.sendMessage(msg.chat.id,
+          `❌ *Username Required*\n\n` +
+          `You need to set a Telegram username in your profile to use this command.\n\n` +
+          `Go to Telegram Settings → Edit Profile → Username`,
+          { parse_mode: 'Markdown' }
+        )
+          .then(m => trackMessage(m.chat.id, m.message_id))
+          .catch(err => console.error("Error:", err));
+      }
+
       if (!telegramToWorkUsername[telegramUsername]) {
+        console.log(`[/ticket res] ERROR: Username "${telegramUsername}" not in allowed list`);
         return bot.sendMessage(msg.chat.id,
           `❌ *Access Denied*\n\n` +
           `You don't have permission to respond to tickets.\n\n` +
