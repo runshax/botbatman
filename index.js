@@ -1224,23 +1224,21 @@ bot.onText(/^\/ticket(?:\s+(me))?$/, async (msg, match) => {
         if (userData.tickets.length > 0) {
           userCount++;
           responseText += `<b>${userCount}. ${userData.fullName}</b> - ${userData.tickets.length} ticket${userData.tickets.length > 1 ? 's' : ''}\n\n`;
+          responseText += `<pre>`;
+          responseText += `Ticket ID            | Title                                      | Type              | Status\n`;
+          responseText += `---------------------|--------------------------------------------|--------------------|--------\n`;
 
-          let ticketNum = 1;
           for (const ticket of userData.tickets) {
-            // Make ticket ID clickable if link exists
-            let ticketIdDisplay = ticket.documentNo;
-            if (ticket.link) {
-              ticketIdDisplay = `<a href="${ticket.link}">${ticket.documentNo}</a>`;
-            }
+            // For table format, we can't use HTML links inside <pre>, so use plain text
+            const ticketId = ticket.documentNo.padEnd(20);
+            const title = (ticket.subject.length > 42 ? ticket.subject.substring(0, 39) + '...' : ticket.subject).padEnd(43);
+            const type = ticket.taskType.padEnd(18);
+            const status = ticket.status;
 
-            // Truncate title if too long
-            const title = ticket.subject.length > 50 ? ticket.subject.substring(0, 47) + '...' : ticket.subject;
-
-            responseText += `   ${ticketNum}. ${ticketIdDisplay}\n`;
-            responseText += `      ${title}\n`;
-            responseText += `      ${ticket.taskType} | ${ticket.status}\n\n`;
-            ticketNum++;
+            responseText += `${ticketId} | ${title} | ${type} | ${status}\n`;
           }
+
+          responseText += `</pre>\n\n`;
         }
       }
 
