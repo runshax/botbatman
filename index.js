@@ -793,8 +793,16 @@ bot.onText(/^\/ask(?:\s+(.+))?$/, async (msg, match) => {
         .catch(err => console.error("Error:", err));
     }
 
+    // Helper function to escape special markdown characters
+    const escapeMarkdown = (text) => {
+      if (!text) return text;
+      // Escape @ symbol which Telegram interprets as username mentions
+      // Also escape other special markdown characters when needed
+      return text.replace(/@/g, '\\@');
+    };
+
     // Build response
-    let response = `📘 *${keyword.name}*\n\n`;
+    let response = `📘 *${escapeMarkdown(keyword.name)}*\n\n`;
 
     // Add category
     if (keyword.category) {
@@ -803,15 +811,15 @@ bot.onText(/^\/ask(?:\s+(.+))?$/, async (msg, match) => {
 
     // Add syntax
     if (keyword.syntax) {
-      response += `*Syntax:* \`${keyword.syntax}\`\n\n`;
+      response += `*Syntax:* \`${escapeMarkdown(keyword.syntax)}\`\n\n`;
     }
 
     // Add description
     if (keyword.description) {
-      response += `*Description:*\n${keyword.description}\n\n`;
+      response += `*Description:*\n${escapeMarkdown(keyword.description)}\n\n`;
     } else if (keyword.fullDescription) {
       const desc = keyword.fullDescription.substring(0, 300);
-      response += `*Description:*\n${desc}${keyword.fullDescription.length > 300 ? '...' : ''}\n\n`;
+      response += `*Description:*\n${escapeMarkdown(desc)}${keyword.fullDescription.length > 300 ? '...' : ''}\n\n`;
     }
 
     // Add examples (limit to 2)
@@ -820,19 +828,19 @@ bot.onText(/^\/ask(?:\s+(.+))?$/, async (msg, match) => {
       const examplesLimit = Math.min(2, keyword.examples.length);
       for (let i = 0; i < examplesLimit; i++) {
         const ex = keyword.examples[i];
-        response += `\n${i + 1}. *${ex.title}*\n`;
+        response += `\n${i + 1}. *${escapeMarkdown(ex.title)}*\n`;
         if (ex.formula) {
-          response += `   Formula: \`${ex.formula}\`\n`;
+          response += `   Formula: \`${escapeMarkdown(ex.formula)}\`\n`;
         }
         if (ex.description) {
-          response += `   ${ex.description}\n`;
+          response += `   ${escapeMarkdown(ex.description)}\n`;
         }
       }
     }
 
     // Add aliases
     if (keyword.aliases && keyword.aliases.length > 0) {
-      response += `\n*Aliases:* ${keyword.aliases.join(', ')}`;
+      response += `\n*Aliases:* ${escapeMarkdown(keyword.aliases.join(', '))}`;
     }
 
     bot.sendMessage(msg.chat.id, response, { parse_mode: 'Markdown' })
