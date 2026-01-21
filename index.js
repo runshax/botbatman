@@ -1095,7 +1095,7 @@ const telegramToWorkUsername = {
   'anDimsky': 'andhikaputra',
   'jemmy33': 'jemmy',
   'joolllmn': 'joel',
-  'rmdhnt6': 'herdian'
+  'rmdhnt6': 'herdiansyah'
 };
 
 bot.onText(/^\/ticket(?:\s+(me))?$/, async (msg, match) => {
