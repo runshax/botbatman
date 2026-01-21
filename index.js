@@ -399,15 +399,21 @@ bot.onText(/^\/help$/, (msg) => {
     `   \`/ask BASE\` - Get BASE keyword details\n` +
     `   \`/ask JOINDATE\` - Employee join date info\n\n` +
 
-    `9️⃣ */clear*\n` +
+    `9️⃣ */ticket*\n` +
+    `   Get today's tickets from resource planning API\n` +
+    `   _Examples:_\n` +
+    `   \`/ticket\` - Show tickets for default user (jemmy)\n` +
+    `   \`/ticket username\` - Show tickets for specific user\n\n` +
+
+    `🔟 */clear*\n` +
     `   Delete all bot messages in this chat\n` +
     `   _Example:_ \`/clear\`\n\n` +
 
-    `🔟 */holiday*\n` +
+    `1️⃣1️⃣ */holiday*\n` +
     `   Check Indonesian public holidays\n` +
     `   _Example:_ \`/holiday\`\n\n` +
 
-    `1️⃣1️⃣ */sfgo[number]*\n` +
+    `1️⃣2️⃣ */sfgo[number]*\n` +
     `   Auto-format SFGO numbers\n` +
     `   _Example:_ \`/sfgo11199\`\n` +
     `   _Result:_ \`sfgo11199-dev-gd|http://localhost:3001\`\n\n` +
@@ -1080,6 +1086,111 @@ bot.on('message', async (msg) => {
     }
   } catch (err) {
     console.error("Error handling pending formula:", err);
+  }
+});
+
+// ==================== TICKET COMMAND ====================
+bot.onText(/^\/ticket(?:\s+(.+))?$/, async (msg, match) => {
+  trackCommand(msg.chat.id, msg.message_id);
+
+  try {
+    const username = match[1] ? match[1].trim() : 'jemmy'; // Default username
+    const today = new Date();
+    const startDate = today.toISOString().split('T')[0]; // Format: YYYY-MM-DD
+    const endDate = startDate; // Same day for today only
+
+    const payload = {
+      startDate: startDate,
+      endDate: endDate,
+      username: username,
+      includeTeam: true
+    };
+
+    // Send request to API
+    const response = await fetch('https://apidoffice.dataon.com/tickets/api/resource-planning/data', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload),
+      timeout: 10000 // 10 second timeout
+    });
+
+    if (!response.ok) {
+      throw new Error(`API returned status ${response.status}: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+
+    // Check if data exists
+    if (!data || !data.allocation || data.allocation.length === 0) {
+      return bot.sendMessage(msg.chat.id,
+        `📋 <b>No Tickets Found</b>\n\n` +
+        `No tickets scheduled for today (${startDate}) for user: ${username}\n\n` +
+        `Use /ticket USERNAME to check for a different user`,
+        { parse_mode: 'HTML' }
+      )
+        .then(m => trackMessage(m.chat.id, m.message_id))
+        .catch(err => console.error("Error:", err));
+    }
+
+    // Filter today's tickets
+    const todayStr = startDate;
+    let responseText = `📋 <b>Today's Tickets (${todayStr})</b>\n`;
+    responseText += `User: ${username}\n\n`;
+
+    let ticketCount = 0;
+
+    for (const allocation of data.allocation) {
+      // Check if dates array contains today
+      if (allocation.dates && allocation.dates.includes(todayStr)) {
+        ticketCount++;
+        responseText += `<b>${ticketCount}. ${allocation.full_name || 'Unknown'}</b>\n`;
+
+        if (allocation.resource_id) {
+          responseText += `   ID: ${allocation.resource_id}\n`;
+        }
+
+        if (allocation.username) {
+          responseText += `   User: ${allocation.username}\n`;
+        }
+
+        responseText += `\n`;
+      }
+    }
+
+    if (ticketCount === 0) {
+      responseText += `<i>No tickets found for today</i>\n`;
+    } else {
+      responseText += `\n<b>Total: ${ticketCount} ticket(s)</b>`;
+    }
+
+    return bot.sendMessage(msg.chat.id, responseText, { parse_mode: 'HTML' })
+      .then(m => trackMessage(m.chat.id, m.message_id))
+      .catch(err => console.error("Error:", err));
+
+  } catch (error) {
+    console.error("Error fetching tickets:", error);
+
+    let errorMessage = '❌ <b>Failed to fetch tickets</b>\n\n';
+
+    if (error.message.includes('status')) {
+      errorMessage += `API Error: ${error.message}\n\n`;
+      errorMessage += `The ticket API might be down or credentials are invalid.`;
+    } else if (error.name === 'AbortError' || error.message.includes('timeout')) {
+      errorMessage += `Request timeout. The API is taking too long to respond.\n\n`;
+      errorMessage += `Please try again later.`;
+    } else if (error.message.includes('fetch')) {
+      errorMessage += `Network error. Unable to reach the ticket API.\n\n`;
+      errorMessage += `Check your internet connection or the API URL.`;
+    } else {
+      errorMessage += `${error.message}\n\n`;
+      errorMessage += `Please try again or contact support.`;
+    }
+
+    return bot.sendMessage(msg.chat.id, errorMessage, { parse_mode: 'HTML' })
+      .then(m => trackMessage(m.chat.id, m.message_id))
+      .catch(err => console.error("Error:", err));
   }
 });
 
