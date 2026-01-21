@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "index.js",
   "engines": {
-    "node": ">=16.x"
+    "node": ">=18.x"
   },
   "scripts": {
     "start": "node index.js"
@@ -13,7 +13,6 @@
     "express": "^4.18.2",
     "hot-formula-parser": "^4.0.0",
     "node-cron": "^3.0.3",
-    "node-fetch": "^2.7.0",
     "node-telegram-bot-api": "^0.67.0",
     "pg": "^8.17.1"
   }

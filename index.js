@@ -7,11 +7,10 @@ const { getTodayHoliday, getTomorrowHoliday, getUpcomingHolidays, formatDateIndo
 const { initDatabase, addCredential, getCredential, getCredentialBySfgo, getAllCredentials, deleteCredential } = require('./services/database');
 require('dotenv').config();
 
-// Ensure fetch is available (Node.js 18+ has it built-in)
-// For older Node versions or deployment environments, this ensures compatibility
+// Verify fetch is available (Node.js 18+ has it built-in)
 if (typeof fetch === 'undefined') {
-  console.warn('fetch is not available globally, using node-fetch as fallback');
-  global.fetch = require('node-fetch');
+  console.error('CRITICAL: fetch is not available! Please use Node.js 18 or higher.');
+  process.exit(1);
 }
 
 // Initialize database on startup
