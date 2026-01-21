@@ -61,8 +61,21 @@ const formatFormula = (formula) => {
 // Helper function to detect unknown variables in formula
 const detectVariables = (formula) => {
   // Known functions to exclude
-  const knownFunctions = ['IF', 'SUM', 'MAX', 'MIN', 'AVERAGE', 'ROUND', 'ABS', 'CEILING', 'FLOOR',
-    'DOUBLE', 'TRIPLE', 'OR', 'AND', 'NOT', 'CONCATENATE', 'LEN', 'UPPER', 'LOWER', 'TRIM'];
+  const knownFunctions = [
+    // Logical functions
+    'IF', 'OR', 'AND', 'NOT',
+    // Math functions
+    'SUM', 'MAX', 'MIN', 'AVERAGE', 'ROUND', 'ABS', 'CEILING', 'FLOOR',
+    'DOUBLE', 'TRIPLE', 'MOD', 'POWER', 'SQRT',
+    // Date functions
+    'MONTH', 'YEAR', 'DAY', 'DATE', 'DATEDIFF', 'TODAY', 'NOW',
+    'DATEVALUE', 'TIMEVALUE', 'WEEKDAY', 'YEARFRAC',
+    // String functions
+    'CONCATENATE', 'LEN', 'UPPER', 'LOWER', 'TRIM', 'LEFT', 'RIGHT', 'MID',
+    'FIND', 'SEARCH', 'REPLACE', 'SUBSTITUTE', 'TEXT',
+    // Count/statistical functions
+    'COUNT', 'COUNTA', 'COUNTIF', 'SUMIF', 'AVERAGEIF'
+  ];
 
   // Remove strings in quotes first
   const formulaWithoutStrings = formula.replace(/"[^"]*"/g, '').replace(/'[^']*'/g, '');
