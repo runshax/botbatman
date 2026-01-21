@@ -401,7 +401,9 @@ bot.onText(/^\/help$/, (msg) => {
 
     `9️⃣ */ticket*\n` +
     `   Get today's tickets grouped by team member\n` +
-    `   _Example:_ \`/ticket\`\n\n` +
+    `   _Examples:_\n` +
+    `   \`/ticket\` - Show all team tickets\n` +
+    `   \`/ticket me\` - Show only your tickets\n\n` +
 
     `🔟 */clear*\n` +
     `   Delete all bot messages in this chat\n` +
@@ -1088,10 +1090,38 @@ bot.on('message', async (msg) => {
 });
 
 // ==================== TICKET COMMAND ====================
-bot.onText(/^\/ticket$/, async (msg) => {
+// Telegram username to work username mapping
+const telegramToWorkUsername = {
+  'anDimsky': 'andhikaputra',
+  'jemmy33': 'jemmy',
+  'joolllmn': 'joel',
+  'rmdhnt6': 'herdian'
+};
+
+bot.onText(/^\/ticket(?:\s+(me))?$/, async (msg, match) => {
   trackCommand(msg.chat.id, msg.message_id);
 
   try {
+    const filterMe = match[1] === 'me';
+    let filterUsername = null;
+
+    // If "me" is specified, get the user's work username
+    if (filterMe) {
+      const telegramUsername = msg.from.username;
+      filterUsername = telegramToWorkUsername[telegramUsername];
+
+      if (!filterUsername) {
+        return bot.sendMessage(msg.chat.id,
+          `❌ <b>Username Not Mapped</b>\n\n` +
+          `Your Telegram username (@${telegramUsername}) is not mapped to a work username.\n\n` +
+          `Please contact admin to add your mapping.`,
+          { parse_mode: 'HTML' }
+        )
+          .then(m => trackMessage(m.chat.id, m.message_id))
+          .catch(err => console.error("Error:", err));
+      }
+    }
+
     const today = new Date();
     const todayStr = today.toISOString().split('T')[0]; // Format: YYYY-MM-DD
 
@@ -1140,51 +1170,77 @@ bot.onText(/^\/ticket$/, async (msg) => {
     let totalTickets = 0;
 
     for (const allocation of data.allocation) {
-      console.log(`Allocation dates:`, allocation.dates);
+      const userName = allocation.username || 'unknown';
+      const fullName = allocation.full_name || userName;
 
-      // Check if dates array contains today
-      if (allocation.dates && allocation.dates.includes(todayStr)) {
-        const userName = allocation.username || 'unknown';
+      // Check if user has tickets array
+      if (allocation.tickets && Array.isArray(allocation.tickets)) {
+        for (const ticket of allocation.tickets) {
+          // Check if ticket's start_date matches today
+          if (ticket.start_date === todayStr || ticket.end_date === todayStr) {
+            if (!userTickets.has(userName)) {
+              userTickets.set(userName, {
+                fullName: fullName,
+                tickets: []
+              });
+            }
 
-        if (!userTickets.has(userName)) {
-          userTickets.set(userName, {
-            fullName: allocation.username || userName,
-            tickets: []
-          });
+            userTickets.get(userName).tickets.push({
+              documentNo: ticket.documentNo || 'N/A',
+              subject: ticket.subject || 'Unknown Task',
+              status: ticket.status || 'Unknown',
+              taskType: ticket.task_type || 'Unknown',
+              link: ticket.link || null
+            });
+            totalTickets++;
+          }
         }
-
-        userTickets.get(userName).tickets.push({
-          resourceId: allocation.resource_id,
-          taskName: allocation.full_name || 'Unknown Task'
-        });
-        totalTickets++;
       }
     }
 
     // Build response grouped by user
-    let responseText = `📋 <b>Today's Tickets (${todayStr})</b>\n\n`;
+    let responseText = `📋 <b>Today's Tickets (${todayStr})</b>`;
+    if (filterMe) {
+      responseText += ` - <i>My Tickets</i>`;
+    }
+    responseText += `\n\n`;
 
     if (totalTickets === 0) {
-      responseText += `<i>No tickets found for today</i>`;
+      if (filterMe) {
+        responseText += `<i>You have no tickets for today</i>`;
+      } else {
+        responseText += `<i>No tickets found for today</i>`;
+      }
     } else {
       let userCount = 0;
       const sortedUsers = Array.from(userTickets.entries()).sort((a, b) => a[0].localeCompare(b[0]));
 
       for (const [userName, userData] of sortedUsers) {
+        // If filtering by "me", only show tickets for the current user
+        if (filterMe && userName !== filterUsername) {
+          continue;
+        }
+
         if (userData.tickets.length > 0) {
           userCount++;
-          responseText += `<b>${userCount}. ${userName}</b> (${userData.tickets.length} ticket${userData.tickets.length > 1 ? 's' : ''})\n`;
+          responseText += `<b>${userCount}. ${userData.fullName}</b> - ${userData.tickets.length} ticket${userData.tickets.length > 1 ? 's' : ''}\n\n`;
 
-          for (let i = 0; i < userData.tickets.length; i++) {
-            const ticket = userData.tickets[i];
-            responseText += `   ${i + 1}. ${ticket.taskName}`;
-            if (ticket.resourceId) {
-              responseText += ` (ID: ${ticket.resourceId})`;
+          let ticketNum = 1;
+          for (const ticket of userData.tickets) {
+            // Make ticket ID clickable if link exists
+            let ticketIdDisplay = ticket.documentNo;
+            if (ticket.link) {
+              ticketIdDisplay = `<a href="${ticket.link}">${ticket.documentNo}</a>`;
             }
-            responseText += `\n`;
-          }
 
-          responseText += `\n`;
+            // Truncate title if too long
+            const title = ticket.subject.length > 50 ? ticket.subject.substring(0, 47) + '...' : ticket.subject;
+
+            responseText += `   ${ticketNum}. ${ticketIdDisplay}\n`;
+            responseText += `      ${title}\n`;
+            responseText += `      ${ticket.taskType} | ${ticket.status}\n\n`;
+            ticketNum++;
+          }
         }
       }
 
