@@ -1117,22 +1117,31 @@ bot.onText(/^\/ticket$/, async (msg) => {
 
     const data = await response.json();
 
+    // Debug: Log the API response structure
+    console.log('API Response:', JSON.stringify(data, null, 2));
+    console.log('Today string:', todayStr);
+
     // Check if data exists
     if (!data || !data.allocation || data.allocation.length === 0) {
       return bot.sendMessage(msg.chat.id,
         `📋 <b>No Tickets Found</b>\n\n` +
-        `No tickets scheduled for today (${todayStr})`,
+        `No tickets scheduled for today (${todayStr})\n\n` +
+        `<i>API returned empty data or no allocations</i>`,
         { parse_mode: 'HTML' }
       )
         .then(m => trackMessage(m.chat.id, m.message_id))
         .catch(err => console.error("Error:", err));
     }
 
+    console.log(`Total allocations received: ${data.allocation.length}`);
+
     // Group tickets by username
     const userTickets = new Map();
     let totalTickets = 0;
 
     for (const allocation of data.allocation) {
+      console.log(`Allocation dates:`, allocation.dates);
+
       // Check if dates array contains today
       if (allocation.dates && allocation.dates.includes(todayStr)) {
         const userName = allocation.username || 'unknown';
