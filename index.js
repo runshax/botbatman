@@ -2,7 +2,9 @@ const TelegramBot = require('node-telegram-bot-api');
 const cron = require('node-cron');
 const express = require('express');
 const { encryptPassword } = require('./services/passwordEncryption');
-const { parseFormula, addCustomFunction } = require('./services/formulaParser');
+const { parseFormula, addCustomFunction, getSupportedFunctions } = require('./services/formulaParser');
+
+
 const { getTodayHoliday, getTomorrowHoliday, getUpcomingHolidays, formatDateIndonesian } = require('./services/indonesianHolidays');
 const { initDatabase, addCredential, getCredential, getCredentialBySfgo, getAllCredentials, deleteCredential } = require('./services/database');
 require('dotenv').config();
@@ -60,22 +62,8 @@ const formatFormula = (formula) => {
 
 // Helper function to detect unknown variables in formula
 const detectVariables = (formula) => {
-  // Known functions to exclude
-  const knownFunctions = [
-    // Logical functions
-    'IF', 'OR', 'AND', 'NOT',
-    // Math functions
-    'SUM', 'MAX', 'MIN', 'AVERAGE', 'ROUND', 'ABS', 'CEILING', 'FLOOR',
-    'DOUBLE', 'TRIPLE', 'MOD', 'POWER', 'SQRT',
-    // Date functions
-    'MONTH', 'YEAR', 'DAY', 'DATE', 'DATEDIFF', 'TODAY', 'NOW',
-    'DATEVALUE', 'TIMEVALUE', 'WEEKDAY', 'YEARFRAC',
-    // String functions
-    'CONCATENATE', 'LEN', 'UPPER', 'LOWER', 'TRIM', 'LEFT', 'RIGHT', 'MID',
-    'FIND', 'SEARCH', 'REPLACE', 'SUBSTITUTE', 'TEXT',
-    // Count/statistical functions
-    'COUNT', 'COUNTA', 'COUNTIF', 'SUMIF', 'AVERAGEIF'
-  ];
+  // Known functions to exclude (dynamically fetched)
+  const knownFunctions = getSupportedFunctions();
 
   // Remove strings in quotes first
   const formulaWithoutStrings = formula.replace(/"[^"]*"/g, '').replace(/'[^']*'/g, '');
@@ -447,6 +435,11 @@ bot.onText(/^\/help$/, (msg) => {
     `   Auto-format SFGO numbers\n` +
     `   _Example:_ \`/sfgo11199\`\n` +
     `   _Result:_ \`sfgo11199-dev-gd|http://localhost:3001\`\n\n` +
+
+    `1️⃣3️⃣ */de64*\n` +
+    `   Decode base64 database credentials (filters _fin and _admin only)\n` +
+    `   _Example:_ \`/de64 W3siREJFTkdJTkUiOi...\`\n` +
+    `   _Returns:_ Prettified JSON with filtered credentials\n\n` +
 
     `💡 _Tip: Type any command without parameters to see usage examples!_`;
 
@@ -1616,6 +1609,92 @@ bot.onText(/^\/holiday$/, async (msg) => {
   } catch (err) {
     console.error("Error in /holiday command:", err);
     bot.sendMessage(msg.chat.id, "❌ *Error!*\nSomething went wrong while fetching holiday information.", { parse_mode: 'Markdown' })
+      .then(msg => trackMessage(msg.chat.id, msg.message_id))
+      .catch(err => console.error("Error sending error message:", err));
+  }
+});
+
+// ==================== BASE64 DECODE COMMAND ====================
+bot.onText(/^\/de64(?:\s+(.+))?$/, async (msg, match) => {
+  trackCommand(msg.chat.id, msg.message_id);
+  try {
+    const base64String = match[1];
+
+    if (!base64String) {
+      return bot.sendMessage(msg.chat.id,
+        "❌ *Format salah!*\n\n*Usage:*\n`/de64 <base64_string>`\n\n*Example:*\n`/de64 W3siREJFTkdJTkUiOi...`\n\n*Description:*\nDecodes base64 string and shows only _fin and _admin database credentials.",
+        { parse_mode: 'Markdown' }
+      )
+        .then(m => trackMessage(m.chat.id, m.message_id))
+        .catch(err => console.error("Error sending de64 help:", err));
+    }
+
+    // Send processing message
+    bot.sendMessage(msg.chat.id, "⏳ *Processing...*\nDecoding base64 string...", { parse_mode: 'Markdown' })
+      .then(msg => trackMessage(msg.chat.id, msg.message_id))
+      .catch(err => console.error("Error sending processing message:", err));
+
+    // Decode base64
+    const decodedString = Buffer.from(base64String.trim(), 'base64').toString('utf-8');
+
+    // Parse JSON
+    const jsonData = JSON.parse(decodedString);
+
+    // Filter to only show entries with _fin or _admin in USR field
+    const allMatches = jsonData.filter(item =>
+      item.USR && (item.USR.includes('_fin') || item.USR.includes('_admin'))
+    );
+
+    // Deduplicate: Keep only 1 unique credential per type (admin, fin)
+    const filtered = [];
+    let hasAdmin = false;
+    let hasFin = false;
+
+    for (const item of allMatches) {
+      if (item.USR.includes('_admin') && !hasAdmin) {
+        filtered.push(item);
+        hasAdmin = true;
+      } else if (item.USR.includes('_fin') && !hasFin) {
+        filtered.push(item);
+        hasFin = true;
+      }
+
+      // Stop once we have both
+      if (hasAdmin && hasFin) break;
+    }
+
+    if (filtered.length === 0) {
+      return bot.sendMessage(msg.chat.id,
+        "⚠️ *No results found!*\n\nNo database credentials with _fin or _admin were found in the decoded data.",
+        { parse_mode: 'Markdown' }
+      )
+        .then(m => trackMessage(m.chat.id, m.message_id))
+        .catch(err => console.error("Error:", err));
+    }
+
+    // Pretty print the result
+    const prettyJson = JSON.stringify(filtered, null, 4);
+
+    // Send the result (use code block for formatting)
+    const resultMessage = `✅ *Decoded & Filtered (${filtered.length} credentials)*\n\n\`\`\`json\n${prettyJson}\n\`\`\``;
+
+    bot.sendMessage(msg.chat.id, resultMessage, { parse_mode: 'Markdown' })
+      .then(msg => trackMessage(msg.chat.id, msg.message_id))
+      .catch(err => console.error("Error sending de64 result:", err));
+
+  } catch (err) {
+    console.error("Error in /de64 command:", err);
+
+    let errorMsg = "❌ *Error!*\n\n";
+    if (err instanceof SyntaxError) {
+      errorMsg += "Invalid JSON format in decoded string.\n\nMake sure the base64 string contains valid JSON data.";
+    } else if (err.message && err.message.includes('Invalid')) {
+      errorMsg += "Invalid base64 string.\n\nMake sure you provided a valid base64-encoded string.";
+    } else {
+      errorMsg += "Something went wrong while processing your request.\n\n" + err.message;
+    }
+
+    bot.sendMessage(msg.chat.id, errorMsg, { parse_mode: 'Markdown' })
       .then(msg => trackMessage(msg.chat.id, msg.message_id))
       .catch(err => console.error("Error sending error message:", err));
   }
