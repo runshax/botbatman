@@ -1,7 +1,10 @@
-const FormulaParser = require('hot-formula-parser').Parser;
+const { Parser, SUPPORTED_FORMULAS } = require('hot-formula-parser');
 
 // Initialize the parser
-const parser = new FormulaParser();
+const parser = new Parser();
+
+// Track custom function names
+const customFunctionNames = [];
 
 /**
  * Parse and evaluate a formula
@@ -48,6 +51,17 @@ const parseFormula = (formula) => {
  */
 const addCustomFunction = (name, handler) => {
   parser.setFunction(name.toUpperCase(), handler);
+  if (!customFunctionNames.includes(name.toUpperCase())) {
+    customFunctionNames.push(name.toUpperCase());
+  }
+};
+
+/**
+ * Get all supported functions (built-in + custom)
+ * @returns {string[]} - Array of supported function names
+ */
+const getSupportedFunctions = () => {
+  return [...(SUPPORTED_FORMULAS || []), ...customFunctionNames];
 };
 
 /**
@@ -156,14 +170,14 @@ addCustomFunction('DATEDIFF', (params) => {
     case 'YEAR': {
       let years = date1.getFullYear() - date2.getFullYear();
       if (date1.getMonth() < date2.getMonth() ||
-          (date1.getMonth() === date2.getMonth() && date1.getDate() < date2.getDate())) {
+        (date1.getMonth() === date2.getMonth() && date1.getDate() < date2.getDate())) {
         years -= 1;
       }
       return swapped ? -years : years;
     }
     case 'MONTH': {
       let months = (date1.getFullYear() - date2.getFullYear()) * 12 +
-                   (date1.getMonth() - date2.getMonth());
+        (date1.getMonth() - date2.getMonth());
       if (date1.getDate() < date2.getDate()) {
         months -= 1;
       }
@@ -353,4 +367,4 @@ addCustomFunction('DOUBLE', (x) => x * 2);
 addCustomFunction('TRIPLE', (x) => x * 3);
 addCustomFunction('GREETING', (name) => `Hello, ${name}!`);
 
-module.exports = { parseFormula, addCustomFunction };
+module.exports = { parseFormula, addCustomFunction, getSupportedFunctions };
