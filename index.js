@@ -416,8 +416,9 @@ bot.onText(/^\/help$/, (msg) => {
     `9️⃣ */ticket*\n` +
     `   Manage and respond to tickets\n` +
     `   _Examples:_\n` +
-    `   \`/ticket\` - Show all team tickets\n` +
+    `   \`/ticket\` - Show all team tickets with clickable links\n` +
     `   \`/ticket me\` - Show only your tickets\n` +
+    `   \`/ticket login\` - Web login instructions (for clickable links)\n` +
     `   \`/ticket res HDTKT-2601-00020563 Bearer eyJ0eXAi...\` - Respond with token\n` +
     `   \`/ticket res HDTKT-2601-00020563\` - Respond (uses stored token)\n` +
     `   \`/ticket logout\` - Clear Bearer token\n` +
@@ -431,10 +432,11 @@ bot.onText(/^\/help$/, (msg) => {
     `   Check Indonesian public holidays\n` +
     `   _Example:_ \`/holiday\`\n\n` +
 
-    `1️⃣2️⃣ */sfgo[number]*\n` +
-    `   Auto-format SFGO numbers\n` +
-    `   _Example:_ \`/sfgo11199\`\n` +
-    `   _Result:_ \`sfgo11199-dev-gd|http://localhost:3001\`\n\n` +
+    `1️⃣2️⃣ */sfgo[number]* or */sfgo[number] qa*\n` +
+    `   Auto-format SFGO numbers for dev or QA environment\n` +
+    `   _Examples:_\n` +
+    `   \`/sfgo11199\` → \`sfgo11199-dev-gd|http://localhost:3001\`\n` +
+    `   \`/sfgo11199 qa\` → \`sfgo11199-gd|https://payroll.greatdayhr.com/payrollqa4\`\n\n` +
 
     `1️⃣3️⃣ */de64*\n` +
     `   Decode base64 database credentials (filters _fin and _admin only)\n` +
@@ -999,12 +1001,21 @@ bot.onText(/^\/parse/, async (msg) => {
 });
 
 // ==================== NEW ENHANCEMENT: SFGO FORMATTER ====================
-// Auto-detect "/sfgo" followed by numbers (e.g., "/sfgo11199")
-bot.onText(/^\/sfgo(\d+)/i, async (msg, match) => {
+// Auto-detect "/sfgo" followed by numbers (e.g., "/sfgo11199" or "/sfgo11199 qa")
+bot.onText(/^\/sfgo(\d+)(?:\s+(qa))?$/i, async (msg, match) => {
   trackCommand(msg.chat.id, msg.message_id);
   try {
     const number = match[1];
-    const result = `sfgo${number}-dev-gd|http://localhost:3001`;
+    const isQa = match[2]; // Will be "qa" if present, undefined otherwise
+
+    let result;
+    if (isQa) {
+      // QA environment URL
+      result = `sfgo${number}-gd|https://payroll.greatdayhr.com/payrollqa4`;
+    } else {
+      // Dev environment URL (default)
+      result = `sfgo${number}-dev-gd|http://localhost:3001`;
+    }
 
     bot.sendMessage(msg.chat.id, result)
       .then(msg => trackMessage(msg.chat.id, msg.message_id))
@@ -1135,6 +1146,31 @@ bot.onText(/^\/ticket(?:\s+(.+))?$/, async (msg, match) => {
   const input = match[1];
 
   try {
+    // SUBCOMMAND: login - Show web login instructions
+    if (input === 'login') {
+      return bot.sendMessage(msg.chat.id,
+        `🔐 <b>Web Login Instructions</b>\n\n` +
+        `To click ticket links and have them open automatically in Chrome:\n\n` +
+        `<b>Step 1: Set Chrome as Default Browser (Windows)</b>\n` +
+        `   1. Open Windows Settings (Win + I)\n` +
+        `   2. Go to "Apps" → "Default apps"\n` +
+        `   3. Find "Web browser" and click on it\n` +
+        `   4. Select "Google Chrome" from the list\n` +
+        `   ✅ All links will now open in Chrome!\n\n` +
+        `<b>Step 2: Login to Web Interfaces</b>\n` +
+        `   • SF7D Office: <a href="https://sf7doffice.dataon.com">sf7doffice.dataon.com</a>\n` +
+        `   • SF Support: <a href="https://sfsupport.dataon.com">sfsupport.dataon.com</a>\n` +
+        `   Keep Chrome open to stay logged in\n\n` +
+        `<b>Step 3: Test It!</b>\n` +
+        `   Use <code>/ticket</code> or <code>/ticket me</code> to see tickets\n` +
+        `   Click any ticket ID → Opens in Chrome (already logged in!)\n\n` +
+        `💡 <i>Do this once and you're set! No Bearer tokens needed for viewing tickets.</i>`,
+        { parse_mode: 'HTML', disable_web_page_preview: true }
+      )
+        .then(m => trackMessage(m.chat.id, m.message_id))
+        .catch(err => console.error("Error:", err));
+    }
+
     // SUBCOMMAND: logout - Clear Bearer token
     if (input === 'logout') {
       if (!userTokens.has(userId)) {
@@ -1476,7 +1512,6 @@ bot.onText(/^\/ticket(?:\s+(.+))?$/, async (msg, match) => {
           responseText += `---------------------|--------------------------------------------|--------------------|--------\n`;
 
           for (const ticket of userData.tickets) {
-            // For table format, we can't use HTML links inside <pre>, so use plain text
             const ticketId = ticket.documentNo.padEnd(20);
             const title = (ticket.subject.length > 42 ? ticket.subject.substring(0, 39) + '...' : ticket.subject).padEnd(43);
             const type = ticket.taskType.padEnd(18);
@@ -1485,7 +1520,16 @@ bot.onText(/^\/ticket(?:\s+(.+))?$/, async (msg, match) => {
             responseText += `${ticketId} | ${title} | ${type} | ${status}\n`;
           }
 
-          responseText += `</pre>\n\n`;
+          responseText += `</pre>\n`;
+
+          // Add clickable links below the table
+          responseText += `<b>Quick Links:</b>\n`;
+          for (const ticket of userData.tickets) {
+            if (ticket.link && ticket.link.trim() !== '') {
+              responseText += `  • <a href="${ticket.link}">${ticket.documentNo}</a>\n`;
+            }
+          }
+          responseText += `\n`;
         }
       }
 
