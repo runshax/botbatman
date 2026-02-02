@@ -583,16 +583,17 @@ bot.onText(/^\/dev(?:\s+(.+))?$/, async (msg, match) => {
 
     const allCreds = [];
 
-    // Add database credentials with username
+    // Add database credentials with username (compact format)
     for (const cred of dbCreds) {
       const sfgoOnly = cred.sfgo.split('|')[0].replace('-dev-gd', '');
-      allCreds.push(`🌐 ${cred.country.toUpperCase()}\n${cred.username}\n${sfgoOnly}`);
+      // Compact format: Country | Username | SFGO on one line
+      allCreds.push(`🌐 ${cred.country.toUpperCase()} | ${cred.username} | ${sfgoOnly}`);
     }
 
     if (allCreds.length > 0) {
-      response = `🔐 *All Regional Credentials*\n---------------------------\n` +
-        allCreds.join('\n---------------------------\n') +
-        `\n\n_Type "/dev XXXX" or "/dev sfgoXXXX" for full credentials._\n_Type "/dev add country / username / password / sfgo" to add._`;
+      response = `🔐 *All Regional Credentials*\n\n` +
+        allCreds.join('\n') +
+        `\n\n_Type "/dev XXXX" or "/dev sfgoXXXX" for password._\n_Type "/dev add country / username / password / sfgo" to add._`;
     } else {
       response = `❌ *No credentials found!*\n\nUse \`/dev add COUNTRY / username / password / sfgoXXXX\` to add`;
     }
@@ -1468,12 +1469,17 @@ bot.onText(/^\/ticket(?:\s+(.+))?$/, async (msg, match) => {
               });
             }
 
+            // Debug: Log ticket object to see available fields
+            if (totalTickets === 0) {
+              console.log('Sample ticket object:', JSON.stringify(ticket, null, 2));
+            }
+
             userTickets.get(userName).tickets.push({
               documentNo: ticket.documentNo || 'N/A',
               subject: ticket.subject || 'Unknown Task',
               status: ticket.status || 'Unknown',
               taskType: ticket.task_type || 'Unknown',
-              link: ticket.link || null
+              link: ticket.link || ticket.url || ticket.ticket_link || ticket.ticket_url || null
             });
             totalTickets++;
           }
