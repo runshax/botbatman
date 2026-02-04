@@ -402,8 +402,8 @@ cron.schedule('40 10 * * 1-5', () => {
     // Format the menu message
     let message = `🍽️ *${todayMenu.day}*\n\n`;
 
-    for (const [category, item] of Object.entries(todayMenu.meals)) {
-      message += `• *${category}:* ${item}\n`;
+    for (const item of Object.values(todayMenu.meals)) {
+      message += `• ${item}\n`;
     }
 
     message += `\n_Selamat makan! 😋_`;
@@ -1754,8 +1754,8 @@ bot.onText(/^\/lunch$/, async (msg) => {
     // Format the menu message (same as notification)
     let message = `🍽️ *${menu.day}*\n\n`;
 
-    for (const [category, item] of Object.entries(menu.meals)) {
-      message += `• *${category}:* ${item}\n`;
+    for (const item of Object.values(menu.meals)) {
+      message += `• ${item}\n`;
     }
 
     message += `\n_Selamat makan! 😋_`;
