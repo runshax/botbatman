@@ -356,6 +356,71 @@ cron.schedule('45 16 * * 1-5', () => {
   timezone: timezone
 });
 
+// Lunch Menu Notification: 10:40 AM (Mon-Fri)
+cron.schedule('40 10 * * 1-5', () => {
+  const holiday = getTodayHoliday();
+
+  // Skip notification if today is a public holiday
+  if (holiday) {
+    console.log(`Skipping lunch menu notification - Today is ${holiday.name}`);
+    return;
+  }
+
+  // Get today's date in YYYY-MM-DD format
+  const today = new Date();
+  const todayStr = today.toISOString().split('T')[0];
+
+  try {
+    // Load lunch menu data
+    const fs = require('fs');
+    const path = require('path');
+    const menuFilePath = path.join(__dirname, 'data', 'lunch-menu.json');
+
+    if (!fs.existsSync(menuFilePath)) {
+      console.log('Lunch menu file not found:', menuFilePath);
+      return;
+    }
+
+    const menuData = JSON.parse(fs.readFileSync(menuFilePath, 'utf8'));
+
+    // Extract year and month from todayStr (YYYY-MM-DD)
+    const [year, month] = todayStr.split('-');
+
+    // Navigate to the menu: menuData[year][month].schedule[date]
+    if (!menuData[year] || !menuData[year][month] || !menuData[year][month].schedule) {
+      console.log(`No lunch menu data available for ${year}-${month}`);
+      return;
+    }
+
+    const todayMenu = menuData[year][month].schedule[todayStr];
+
+    if (!todayMenu) {
+      console.log(`No lunch menu found for today: ${todayStr}`);
+      return;
+    }
+
+    // Format the menu message
+    let message = `🍽️ *${todayMenu.day}*\n\n`;
+
+    for (const [category, item] of Object.entries(todayMenu.meals)) {
+      message += `• *${category}:* ${item}\n`;
+    }
+
+    message += `\n_Selamat makan! 😋_`;
+
+    bot.sendMessage(chatId, message, { parse_mode: 'Markdown' })
+      .then(msg => trackMessage(msg.chat.id, msg.message_id))
+      .catch(err => console.error("Error sending lunch menu notification:", err));
+
+    console.log(`Lunch menu notification sent at 10:40 AM for ${todayStr}`);
+  } catch (error) {
+    console.error('Error loading lunch menu:', error);
+  }
+}, {
+  scheduled: true,
+  timezone: timezone
+});
+
 // Error handling for polling errors
 bot.on('polling_error', (error) => {
   console.error('Polling error:', error.code, error.message);
@@ -428,17 +493,21 @@ bot.onText(/^\/help$/, (msg) => {
     `   Delete all bot messages in this chat\n` +
     `   _Example:_ \`/clear\`\n\n` +
 
-    `1️⃣1️⃣ */holiday*\n` +
+    `1️⃣1️⃣ */lunch*\n` +
+    `   Check today's lunch menu (auto-notified at 10:40 AM)\n` +
+    `   _Example:_ \`/lunch\`\n\n` +
+
+    `1️⃣2️⃣ */holiday*\n` +
     `   Check Indonesian public holidays\n` +
     `   _Example:_ \`/holiday\`\n\n` +
 
-    `1️⃣2️⃣ */sfgo[number]* or */sfgo[number] qa*\n` +
+    `1️⃣3️⃣ */sfgo[number]* or */sfgo[number] qa*\n` +
     `   Auto-format SFGO numbers for dev or QA environment\n` +
     `   _Examples:_\n` +
     `   \`/sfgo11199\` → \`sfgo11199-dev-gd|http://localhost:3001\`\n` +
     `   \`/sfgo11199 qa\` → \`sfgo11199-gd|https://payroll.greatdayhr.com/payrollqa4\`\n\n` +
 
-    `1️⃣3️⃣ */de64*\n` +
+    `1️⃣4️⃣ */de64*\n` +
     `   Decode base64 database credentials (filters _fin and _admin only)\n` +
     `   _Example:_ \`/de64 W3siREJFTkdJTkUiOi...\`\n` +
     `   _Returns:_ Prettified JSON with filtered credentials\n\n` +
@@ -1617,6 +1686,87 @@ bot.onText(/^\/clear$/, async (msg) => {
   } catch (err) {
     console.error("Error in /clear command:", err);
     bot.sendMessage(msg.chat.id, "❌ *Error!*\nSomething went wrong while clearing messages.", { parse_mode: 'Markdown' })
+      .then(msg => trackMessage(msg.chat.id, msg.message_id))
+      .catch(err => console.error("Error sending error message:", err));
+  }
+});
+
+// ==================== LUNCH MENU COMMAND ====================
+bot.onText(/^\/lunch$/, async (msg) => {
+  trackCommand(msg.chat.id, msg.message_id);
+  try {
+    // Check if today is a holiday
+    const holiday = getTodayHoliday();
+    if (holiday) {
+      return bot.sendMessage(msg.chat.id,
+        `🗓️ *Today is ${holiday.name}*\n\n_No lunch menu available on holidays._`,
+        { parse_mode: 'Markdown' }
+      )
+        .then(m => trackMessage(m.chat.id, m.message_id))
+        .catch(err => console.error("Error:", err));
+    }
+
+    const fs = require('fs');
+    const path = require('path');
+
+    // Get today's date
+    const today = new Date();
+    const todayStr = today.toISOString().split('T')[0];
+
+    // Load lunch menu data
+    const menuFilePath = path.join(__dirname, 'data', 'lunch-menu.json');
+
+    if (!fs.existsSync(menuFilePath)) {
+      return bot.sendMessage(msg.chat.id,
+        "❌ *Menu file not found!*\n\nThe lunch menu data is not available.",
+        { parse_mode: 'Markdown' }
+      )
+        .then(m => trackMessage(m.chat.id, m.message_id))
+        .catch(err => console.error("Error:", err));
+    }
+
+    const menuData = JSON.parse(fs.readFileSync(menuFilePath, 'utf8'));
+
+    // Extract year and month from todayStr (YYYY-MM-DD)
+    const [year, month] = todayStr.split('-');
+
+    // Navigate to the menu: menuData[year][month].schedule[date]
+    if (!menuData[year] || !menuData[year][month] || !menuData[year][month].schedule) {
+      return bot.sendMessage(msg.chat.id,
+        `❌ *No menu available*\n\n_No lunch menu data for ${year}-${month}._`,
+        { parse_mode: 'Markdown' }
+      )
+        .then(m => trackMessage(m.chat.id, m.message_id))
+        .catch(err => console.error("Error:", err));
+    }
+
+    const menu = menuData[year][month].schedule[todayStr];
+
+    if (!menu) {
+      return bot.sendMessage(msg.chat.id,
+        `❌ *No menu available today*\n\n_No lunch menu scheduled for ${todayStr}._`,
+        { parse_mode: 'Markdown' }
+      )
+        .then(m => trackMessage(m.chat.id, m.message_id))
+        .catch(err => console.error("Error:", err));
+    }
+
+    // Format the menu message (same as notification)
+    let message = `🍽️ *${menu.day}*\n\n`;
+
+    for (const [category, item] of Object.entries(menu.meals)) {
+      message += `• *${category}:* ${item}\n`;
+    }
+
+    message += `\n_Selamat makan! 😋_`;
+
+    bot.sendMessage(msg.chat.id, message, { parse_mode: 'Markdown' })
+      .then(m => trackMessage(m.chat.id, m.message_id))
+      .catch(err => console.error("Error:", err));
+
+  } catch (err) {
+    console.error("Error in /lunch command:", err);
+    bot.sendMessage(msg.chat.id, "❌ *Error!*\nSomething went wrong while fetching lunch menu.", { parse_mode: 'Markdown' })
       .then(msg => trackMessage(msg.chat.id, msg.message_id))
       .catch(err => console.error("Error sending error message:", err));
   }

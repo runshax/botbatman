@@ -1,0 +1,226 @@
+{
+  "2026": {
+    "02": {
+      "month_name": "February 2026",
+      "schedule": {
+        "2026-02-02": {
+          "day": "Monday, 02 Februari 2026",
+          "meals": {
+            "Nasi": "Nasi",
+            "Pagi": "Ikan Kembung sambal dhabu dhabu",
+            "Lauk 1": "tempe goreng tepung",
+            "Lauk 2": "lalapan",
+            "Sayur": "tumis bayam",
+            "Sambal": "Sambal",
+            "Buah": "Buah"
+          }
+        },
+        "2026-02-03": {
+          "day": "Tuesday, 03 Februari 2026",
+          "meals": {
+            "Nasi": "Nasi",
+            "Pagi": "Chicken Sweet Sour",
+            "Lauk 1": "Tahu Goreng tepung",
+            "Lauk 2": "salad sayuran",
+            "Sayur": "Risol",
+            "Sambal": "Sambal",
+            "Buah": "Buah"
+          }
+        },
+        "2026-02-04": {
+          "day": "Wednesday, 04 Februari 2026",
+          "meals": {
+            "Nasi": "Nasi",
+            "Pagi": "Daging Rica rica",
+            "Lauk 1": "bakwan sayur",
+            "Lauk 2": "tumis jamur",
+            "Sayur": "sop Tahu spesial",
+            "Sambal": "Sambal",
+            "Buah": "Buah"
+          }
+        },
+        "2026-02-05": {
+          "day": "Thursday, 05 Februari 2026",
+          "meals": {
+            "Nasi": "Nasi",
+            "Pagi": "Ayam bumbu Rujak",
+            "Lauk 1": "daun Ubi rambat cabai Hijau",
+            "Lauk 2": "telur balado",
+            "Sayur": "bakwan jagung",
+            "Sambal": "Sambal",
+            "Buah": "Buah"
+          }
+        },
+        "2026-02-06": {
+          "day": "Friday, 06 Februari 2026",
+          "meals": {
+            "Nasi": "Lontong cah Gomeh",
+            "Sambal": "Sambal",
+            "Buah": "Buah"
+          }
+        },
+        "2026-02-09": {
+          "day": "Monday, 09 Februari 2026",
+          "meals": {
+            "Nasi": "Nasi",
+            "Pagi": "Gurame sambal Ijo",
+            "Lauk 1": "Tumis Sawi putih, kembang kol, wortel caysim",
+            "Lauk 2": "tempe goreng tepung",
+            "Lauk 3": "peyek kacang",
+            "Sambal": "Sambal",
+            "Buah": "Buah"
+          }
+        },
+        "2026-02-10": {
+          "day": "Tuesday, 10 Februari 2026",
+          "meals": {
+            "Nasi": "Nasi",
+            "Pagi": "Ayam goreng kenumbar",
+            "Lauk 1": "terong Balado",
+            "Lauk 2": "bakwan jagung",
+            "Sayur": "Sop KImlo",
+            "Sambal": "Sambal",
+            "Buah": "Buah"
+          }
+        },
+        "2026-02-11": {
+          "day": "Wednesday, 11 Februari 2026",
+          "meals": {
+            "Nasi": "Nasi",
+            "Pagi": "Daging bulgogi sc",
+            "Lauk 1": "sapo tofu",
+            "Lauk 2": "bakwan toge",
+            "Sayur": "pangsit goreng",
+            "Sambal": "Sambal",
+            "Buah": "Buah"
+          }
+        },
+        "2026-02-12": {
+          "day": "Thursday, 12 Februari 2026",
+          "meals": {
+            "Nasi": "Nasi",
+            "Pagi": "ayam goreng sambal kunyit sereh",
+            "Lauk 1": "pecel sayuran",
+            "Lauk 2": "telur rebus",
+            "Sayur": "tahu isi goreng",
+            "Sambal": "Sambal",
+            "Buah": "Buah"
+          }
+        },
+        "2026-02-13": {
+          "day": "Friday, 13 Februari 2026",
+          "meals": {
+            "Nasi": "Spagheti aglio Olio",
+            "Pagi": "chicken katsu",
+            "Lauk": "Orek telur, buncia wortel",
+            "Sambal": "Sambal",
+            "Buah": "Buah"
+          }
+        },
+        "2026-02-16": {
+          "day": "Monday, 16 Februari 2026",
+          "meals": {
+            "Nasi": "Nasi",
+            "Pagi": "Ayam Rendang",
+            "Lauk 1": "Gulai daun singkong",
+            "Lauk 2": "Bakwan toge",
+            "Lauk 3": "Lalapan Timun",
+            "Sambal": "Sambal",
+            "Buah": "Buah"
+          }
+        },
+        "2026-02-18": {
+          "day": "Wednesday, 18 Februari 2026",
+          "meals": {
+            "Nasi": "Nasi",
+            "Pagi": "Ikan Marlin bumbu kemangi",
+            "Lauk 1": "orek tempe",
+            "Lauk 2": "Rica rodo",
+            "Sayur": "Risol",
+            "Sambal": "Sambal",
+            "Buah": "Buah"
+          }
+        },
+        "2026-02-19": {
+          "day": "Thursday, 19 Februari 2026",
+          "meals": {
+            "Nasi": "Nasi",
+            "Pagi": "Ayam Goreng lengkuas",
+            "Lauk 1": "tahu goreng",
+            "Lauk 2": "lalapan",
+            "Sayur": "sayur asam",
+            "Sambal": "Sambal",
+            "Buah": "Buah"
+          }
+        },
+        "2026-02-20": {
+          "day": "Friday, 20 Februari 2026",
+          "meals": {
+            "Nasi": "Soto Ayam",
+            "Sambal": "Sambal rebus",
+            "Buah": "Buah"
+          }
+        },
+        "2026-02-23": {
+          "day": "Monday, 23 Februari 2026",
+          "meals": {
+            "Nasi": "Nasi",
+            "Pagi": "Ikan Nila goreng",
+            "Lauk 1": "sayur gulai lombok lujau",
+            "Lauk 2": "tahu goreng",
+            "Sayur": "telur dadar",
+            "Sambal": "Sambal",
+            "Buah": "Buah"
+          }
+        },
+        "2026-02-24": {
+          "day": "Tuesday, 24 Februari 2026",
+          "meals": {
+            "Nasi": "Nasi",
+            "Pagi": "Ayam Lada hitam",
+            "Lauk 1": "capcay",
+            "Lauk 2": "bakwan sayut",
+            "Sayur": "peyek kacang",
+            "Sambal": "Sambal",
+            "Buah": "Buah"
+          }
+        },
+        "2026-02-25": {
+          "day": "Wednesday, 25 Februari 2026",
+          "meals": {
+            "Nasi": "Nasi",
+            "Pagi": "Daging Putren cah cabai hijau",
+            "Lauk 1": "Tumis Pakcoy, udang and tofu",
+            "Lauk 2": "Gyoza",
+            "Sayur": "Miso sop",
+            "Sambal": "Sambal",
+            "Buah": "Buah"
+          }
+        },
+        "2026-02-26": {
+          "day": "Thursday, 26 Februari 2026",
+          "meals": {
+            "Nasi": "Nasi",
+            "Pagi": "Ayam goreng Oregano",
+            "Lauk 1": "Steak sayuran",
+            "Lauk 2": "jamur crispy",
+            "Sayur": "screumble eggs",
+            "Sambal": "Sambal",
+            "Buah": "Buah"
+          }
+        },
+        "2026-02-27": {
+          "day": "Friday, 27 Februari 2026",
+          "meals": {
+            "Nasi": "Nasi Goreng ayam + sayur lada hitam",
+            "Lauk 1": "Sate Udang 2pc bakar",
+            "Lauk 2": "lalapan",
+            "Lauk 3": "Kerupuk Udang",
+            "Sambal": "Sambal hot lava",
+            "Buah": "Buah"
+          }
+        }
+      }
+    }
+  }
+}
