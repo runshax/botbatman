@@ -300,8 +300,8 @@ app.get('/', async (req, res) => {
         }
 
         // Truncate data for display
-        if (dataPreview.length > 100) {
-          dataPreview = dataPreview.substring(0, 100) + '...';
+        if (dataPreview.length > 400) {
+          dataPreview = dataPreview.substring(0, 400) + '...';
         }
 
         // Escape HTML special characters
