@@ -255,6 +255,22 @@ const markErrorLogsAsReminded = async (ids) => {
   }
 };
 
+// Get error logs by date (YYYY-MM-DD format)
+const getErrorLogsByDate = async (date) => {
+  try {
+    const result = await pool.query(
+      `SELECT * FROM error_msg_log
+       WHERE DATE(created_date) = $1
+       ORDER BY created_date DESC`,
+      [date]
+    );
+    return result.rows;
+  } catch (err) {
+    console.error('Error getting error logs by date:', err);
+    return [];
+  }
+};
+
 module.exports = {
   initDatabase,
   addCredential,
@@ -270,5 +286,6 @@ module.exports = {
   deleteAllErrorLogs,
   getUnremindedErrorLogs,
   markErrorLogAsReminded,
-  markErrorLogsAsReminded
+  markErrorLogsAsReminded,
+  getErrorLogsByDate
 };

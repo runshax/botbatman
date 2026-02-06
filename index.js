@@ -6,7 +6,7 @@ const { parseFormula, addCustomFunction, getSupportedFunctions } = require('./se
 
 
 const { getTodayHoliday, getTomorrowHoliday, getUpcomingHolidays, formatDateIndonesian } = require('./services/indonesianHolidays');
-const { initDatabase, addCredential, getCredential, getCredentialBySfgo, getAllCredentials, deleteCredential, saveErrorLog, saveErrorLogBatch, getAllErrorLogs, getErrorLogById, deleteErrorLog, deleteAllErrorLogs, getUnremindedErrorLogs, markErrorLogsAsReminded } = require('./services/database');
+const { initDatabase, addCredential, getCredential, getCredentialBySfgo, getAllCredentials, deleteCredential, saveErrorLog, saveErrorLogBatch, getAllErrorLogs, getErrorLogById, deleteErrorLog, deleteAllErrorLogs, getUnremindedErrorLogs, markErrorLogsAsReminded, getErrorLogsByDate } = require('./services/database');
 require('dotenv').config();
 
 // Verify fetch is available (Node.js 18+ has it built-in)
@@ -312,12 +312,20 @@ app.get('/', async (req, res) => {
         message += `   📝 ${dataPreview}\n\n`;
       }
 
-      // If there are more than 5, show remaining IDs
+      // If there are more than 5, show remaining IDs (limit to 10)
       if (remainingLogs.length > 0) {
-        const remainingIds = remainingLogs.map(log => log.id.substring(0, 8)).join(', ');
+        const idsToShow = remainingLogs.slice(0, 10);
+        const remainingIds = idsToShow.map(log => log.id.substring(0, 8)).join(', ');
+        const hiddenCount = remainingLogs.length > 10 ? remainingLogs.length - 10 : 0;
+
         message += `\n<i>⚠️ Additional ${remainingLogs.length} error(s) not shown:</i>\n`;
-        message += `<code>${remainingIds}</code>\n`;
-        message += `<i>Use /errorlog &lt;id&gt; to view and mark as reminded</i>`;
+        message += `<code>${remainingIds}</code>`;
+
+        if (hiddenCount > 0) {
+          message += `\n<i>... and ${hiddenCount} more</i>`;
+        }
+
+        message += `\n<i>Use /errorlog &lt;id&gt; to view and mark as reminded</i>`;
       }
 
       // Send to Telegram
@@ -801,7 +809,8 @@ bot.onText(/^\/help$/, (msg) => {
     `   _Examples:_\n` +
     `   \`/errorlog\` - Show latest 10 logs\n` +
     `   \`/errorlog <id>\` - Show specific log details\n` +
-    `   \`/errorlog clear\` - Delete all error logs\n\n` +
+    `   \`/errorlog clear\` - Delete all error logs\n` +
+    `   \`/errorlog download 2026-02-06\` - Download logs as TXT file\n\n` +
 
     `💡 _Tip: Type any command without parameters to see usage examples!_`;
 
@@ -2006,6 +2015,75 @@ bot.onText(/^\/errorlog(?:\s+(.+))?$/, async (msg, match) => {
           .then(m => trackMessage(m.chat.id, m.message_id))
           .catch(err => console.error("Error:", err));
       }
+    }
+
+    // /errorlog download YYYY-MM-DD - Download logs from specific date as TXT file
+    if (subCommand && subCommand.toLowerCase().startsWith('download')) {
+      const dateMatch = subCommand.match(/download\s+(\d{4}-\d{2}-\d{2})/i);
+
+      if (!dateMatch) {
+        return bot.sendMessage(msg.chat.id,
+          `❌ <b>Invalid format</b>\n\nUsage: <code>/errorlog download 2026-02-06</code>`,
+          { parse_mode: 'HTML' }
+        )
+          .then(m => trackMessage(m.chat.id, m.message_id))
+          .catch(err => console.error("Error:", err));
+      }
+
+      const targetDate = dateMatch[1];
+      const logs = await getErrorLogsByDate(targetDate);
+
+      if (logs.length === 0) {
+        return bot.sendMessage(msg.chat.id,
+          `📋 <b>No error logs found for ${targetDate}</b>`,
+          { parse_mode: 'HTML' }
+        )
+          .then(m => trackMessage(m.chat.id, m.message_id))
+          .catch(err => console.error("Error:", err));
+      }
+
+      // Generate TXT file content
+      const fs = require('fs');
+      const path = require('path');
+      let txtContent = `Error Logs for ${targetDate}\n`;
+      txtContent += `Total: ${logs.length} log(s)\n`;
+      txtContent += `Generated: ${new Date().toISOString()}\n`;
+      txtContent += `${'='.repeat(80)}\n\n`;
+
+      for (const log of logs) {
+        const date = new Date(log.created_date).toLocaleString('id-ID', {
+          timeZone: 'Asia/Jakarta'
+        });
+
+        txtContent += `ID: ${log.id}\n`;
+        txtContent += `Date: ${date}\n`;
+        if (log.type_data) {
+          txtContent += `Type: ${log.type_data}\n`;
+        }
+        txtContent += `Status Reminder: ${log.status_reminder || 'NULL'}\n`;
+        txtContent += `Data:\n${log.data}\n`;
+        txtContent += `${'-'.repeat(80)}\n\n`;
+      }
+
+      // Save to temp file
+      const tempDir = path.join(__dirname, 'temp');
+      if (!fs.existsSync(tempDir)) {
+        fs.mkdirSync(tempDir, { recursive: true });
+      }
+
+      const fileName = `errorlogs_${targetDate}.txt`;
+      const filePath = path.join(tempDir, fileName);
+      fs.writeFileSync(filePath, txtContent, 'utf8');
+
+      // Send file to Telegram
+      await bot.sendDocument(msg.chat.id, filePath, {
+        caption: `📋 Error logs for ${targetDate} (${logs.length} log(s))`
+      });
+
+      // Delete temp file
+      fs.unlinkSync(filePath);
+
+      return;
     }
 
     // /errorlog or /errorlog show - Show all error logs
