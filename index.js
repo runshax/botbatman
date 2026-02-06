@@ -1817,8 +1817,8 @@ bot.onText(/^\/errorlog(?:\s+(.+))?$/, async (msg, match) => {
 
       if (logs.length === 0) {
         return bot.sendMessage(msg.chat.id,
-          `📋 *Error Logs*\n\n_No error logs found._`,
-          { parse_mode: 'Markdown' }
+          `📋 <b>Error Logs</b>\n\n<i>No error logs found.</i>`,
+          { parse_mode: 'HTML' }
         )
           .then(m => trackMessage(m.chat.id, m.message_id))
           .catch(err => console.error("Error:", err));
@@ -1826,7 +1826,7 @@ bot.onText(/^\/errorlog(?:\s+(.+))?$/, async (msg, match) => {
 
       // Show latest 10 logs
       const displayLogs = logs.slice(0, 10);
-      let message = `📋 *Error Logs* (${logs.length} total, showing latest 10)\n\n`;
+      let message = `📋 <b>Error Logs</b> (${logs.length} total, showing latest 10)\n\n`;
 
       for (const log of displayLogs) {
         const date = new Date(log.created_date).toLocaleString('id-ID', {
@@ -1841,29 +1841,13 @@ bot.onText(/^\/errorlog(?:\s+(.+))?$/, async (msg, match) => {
           dataPreview = dataPreview.substring(0, 100) + '...';
         }
 
-        // Escape markdown special characters in data preview
+        // Escape HTML special characters only
         dataPreview = dataPreview
-          .replace(/\\/g, '\\\\')
-          .replace(/`/g, '\\`')
-          .replace(/\*/g, '\\*')
-          .replace(/_/g, '\\_')
-          .replace(/\[/g, '\\[')
-          .replace(/\]/g, '\\]')
-          .replace(/\(/g, '\\(')
-          .replace(/\)/g, '\\)')
-          .replace(/~/g, '\\~')
-          .replace(/>/g, '\\>')
-          .replace(/#/g, '\\#')
-          .replace(/\+/g, '\\+')
-          .replace(/-/g, '\\-')
-          .replace(/=/g, '\\=')
-          .replace(/\|/g, '\\|')
-          .replace(/\{/g, '\\{')
-          .replace(/\}/g, '\\}')
-          .replace(/\./g, '\\.')
-          .replace(/!/g, '\\!');
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;');
 
-        message += `🔸 *ID:* \`${log.id}\`\n`;
+        message += `🔸 <b>ID:</b> <code>${log.id}</code>\n`;
         message += `   📅 ${date}\n`;
         if (log.type_data) {
           message += `   🏷️ Type: ${log.type_data}\n`;
@@ -1872,10 +1856,10 @@ bot.onText(/^\/errorlog(?:\s+(.+))?$/, async (msg, match) => {
       }
 
       if (logs.length > 10) {
-        message += `_Showing 10 of ${logs.length} logs. Use \`/errorlog <id>\` to view specific log._`;
+        message += `<i>Showing 10 of ${logs.length} logs. Use /errorlog &lt;id&gt; to view specific log.</i>`;
       }
 
-      return bot.sendMessage(msg.chat.id, message, { parse_mode: 'Markdown' })
+      return bot.sendMessage(msg.chat.id, message, { parse_mode: 'HTML' })
         .then(m => trackMessage(m.chat.id, m.message_id))
         .catch(err => console.error("Error:", err));
     }
@@ -1886,8 +1870,8 @@ bot.onText(/^\/errorlog(?:\s+(.+))?$/, async (msg, match) => {
 
     if (!log) {
       return bot.sendMessage(msg.chat.id,
-        `❌ *Error log not found*\n\n_ID: ${logId}_`,
-        { parse_mode: 'Markdown' }
+        `❌ <b>Error log not found</b>\n\n<i>ID: ${logId}</i>`,
+        { parse_mode: 'HTML' }
       )
         .then(m => trackMessage(m.chat.id, m.message_id))
         .catch(err => console.error("Error:", err));
@@ -1899,21 +1883,27 @@ bot.onText(/^\/errorlog(?:\s+(.+))?$/, async (msg, match) => {
       timeStyle: 'medium'
     });
 
-    let message = `📋 *Error Log Details*\n\n`;
-    message += `🔸 *ID:* \`${log.id}\`\n`;
-    message += `📅 *Date:* ${date}\n`;
-    if (log.type_data) {
-      message += `🏷️ *Type:* ${log.type_data}\n`;
-    }
-    message += `\n📝 *Data:*\n\`\`\`\n${log.data}\n\`\`\``;
+    // Escape HTML special characters in data
+    const escapedData = log.data
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
 
-    return bot.sendMessage(msg.chat.id, message, { parse_mode: 'Markdown' })
+    let message = `📋 <b>Error Log Details</b>\n\n`;
+    message += `🔸 <b>ID:</b> <code>${log.id}</code>\n`;
+    message += `📅 <b>Date:</b> ${date}\n`;
+    if (log.type_data) {
+      message += `🏷️ <b>Type:</b> ${log.type_data}\n`;
+    }
+    message += `\n📝 <b>Data:</b>\n<pre>${escapedData}</pre>`;
+
+    return bot.sendMessage(msg.chat.id, message, { parse_mode: 'HTML' })
       .then(m => trackMessage(m.chat.id, m.message_id))
       .catch(err => console.error("Error:", err));
 
   } catch (err) {
     console.error("Error in /errorlog command:", err);
-    bot.sendMessage(msg.chat.id, "❌ *Error!*\nSomething went wrong while fetching error logs.", { parse_mode: 'Markdown' })
+    bot.sendMessage(msg.chat.id, "❌ <b>Error!</b>\nSomething went wrong while fetching error logs.", { parse_mode: 'HTML' })
       .then(msg => trackMessage(msg.chat.id, msg.message_id))
       .catch(err => console.error("Error sending error message:", err));
   }
