@@ -8,9 +8,10 @@ const pool = new Pool({
   }
 });
 
-// Initialize database table
+// Initialize database tables
 const initDatabase = async () => {
   try {
+    // Create dev_credentials table
     await pool.query(`
       CREATE TABLE IF NOT EXISTS dev_credentials (
         id SERIAL PRIMARY KEY,
@@ -23,7 +24,18 @@ const initDatabase = async () => {
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
-    console.log('Database table initialized successfully');
+
+    // Create error_msg_log table for incoming API data
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS error_msg_log (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        created_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        data TEXT NOT NULL,
+        type_data VARCHAR(255)
+      )
+    `);
+
+    console.log('Database tables initialized successfully');
   } catch (err) {
     console.error('Error initializing database:', err);
   }
@@ -102,11 +114,58 @@ const deleteCredential = async (sfgo) => {
   }
 };
 
+// ==================== ERROR MESSAGE LOG FUNCTIONS ====================
+
+// Save error log from external API
+const saveErrorLog = async (data, typeData) => {
+  try {
+    const dataString = typeof data === 'string' ? data : JSON.stringify(data);
+    const result = await pool.query(
+      'INSERT INTO error_msg_log (data, type_data) VALUES ($1, $2) RETURNING *',
+      [dataString, typeData]
+    );
+    return { success: true, data: result.rows[0] };
+  } catch (err) {
+    console.error('Error saving error log:', err);
+    return { success: false, error: err.message };
+  }
+};
+
+// Get all error logs
+const getAllErrorLogs = async () => {
+  try {
+    const result = await pool.query(
+      'SELECT * FROM error_msg_log ORDER BY created_date DESC'
+    );
+    return result.rows;
+  } catch (err) {
+    console.error('Error getting error logs:', err);
+    return [];
+  }
+};
+
+// Get error log by ID
+const getErrorLogById = async (id) => {
+  try {
+    const result = await pool.query(
+      'SELECT * FROM error_msg_log WHERE id = $1',
+      [id]
+    );
+    return result.rows[0] || null;
+  } catch (err) {
+    console.error('Error getting error log by ID:', err);
+    return null;
+  }
+};
+
 module.exports = {
   initDatabase,
   addCredential,
   getCredential,
   getCredentialBySfgo,
   getAllCredentials,
-  deleteCredential
+  deleteCredential,
+  saveErrorLog,
+  getAllErrorLogs,
+  getErrorLogById
 };

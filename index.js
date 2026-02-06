@@ -6,7 +6,7 @@ const { parseFormula, addCustomFunction, getSupportedFunctions } = require('./se
 
 
 const { getTodayHoliday, getTomorrowHoliday, getUpcomingHolidays, formatDateIndonesian } = require('./services/indonesianHolidays');
-const { initDatabase, addCredential, getCredential, getCredentialBySfgo, getAllCredentials, deleteCredential } = require('./services/database');
+const { initDatabase, addCredential, getCredential, getCredentialBySfgo, getAllCredentials, deleteCredential, saveErrorLog, getAllErrorLogs, getErrorLogById } = require('./services/database');
 require('dotenv').config();
 
 // Verify fetch is available (Node.js 18+ has it built-in)
@@ -228,17 +228,125 @@ const searchKeyword = (query) => {
   return match;
 };
 
-// 1. HEALTH CHECK SERVER (Required for Koyeb)
+// 1. HEALTH CHECK SERVER & API (Required for Koyeb)
 // Koyeb needs to see a "website" running on port 8080 or it will restart the bot.
 const app = express();
 const PORT = process.env.PORT || 8080;
 
+// Middleware
+app.use(express.json({ limit: '10mb' })); // Parse JSON bodies up to 10MB
+app.use(express.urlencoded({ extended: true })); // Parse URL-encoded bodies
+
+// Auth middleware for API endpoints
+const authenticateAPI = (req, res, next) => {
+  const authKey = req.headers['x-api-key'] || req.headers['authorization'];
+  const expectedKey = process.env.API_KEY;
+
+  if (!expectedKey) {
+    return res.status(500).json({
+      success: false,
+      error: 'API key not configured on server'
+    });
+  }
+
+  if (!authKey || authKey !== expectedKey) {
+    return res.status(401).json({
+      success: false,
+      error: 'Unauthorized: Invalid or missing API key'
+    });
+  }
+
+  next();
+};
+
+// Health check endpoint (no auth needed)
 app.get('/', (req, res) => {
   res.send('Bot is online and healthy! 🚀');
 });
 
+// API endpoint to save error logs from external servers
+app.post('/api/saveerrorlog', authenticateAPI, async (req, res) => {
+  try {
+    const { data, type_data } = req.body;
+
+    // Validation
+    if (!data) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing required field: data'
+      });
+    }
+
+    // Save to database
+    const result = await saveErrorLog(data, type_data || null);
+
+    if (result.success) {
+      return res.status(201).json({
+        success: true,
+        message: 'Error log saved successfully',
+        id: result.data.id,
+        created_date: result.data.created_date
+      });
+    } else {
+      return res.status(500).json({
+        success: false,
+        error: result.error
+      });
+    }
+  } catch (error) {
+    console.error('Error in /api/error-log:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Internal server error'
+    });
+  }
+});
+
+// Get all error logs (with auth - for debugging)
+app.get('/api/error-log', authenticateAPI, async (req, res) => {
+  try {
+    const logs = await getAllErrorLogs();
+    return res.status(200).json({
+      success: true,
+      count: logs.length,
+      data: logs
+    });
+  } catch (error) {
+    console.error('Error in GET /api/error-log:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Internal server error'
+    });
+  }
+});
+
+// Get error log by ID (with auth)
+app.get('/api/error-log/:id', authenticateAPI, async (req, res) => {
+  try {
+    const log = await getErrorLogById(req.params.id);
+    if (log) {
+      return res.status(200).json({
+        success: true,
+        data: log
+      });
+    } else {
+      return res.status(404).json({
+        success: false,
+        error: 'Error log not found'
+      });
+    }
+  } catch (error) {
+    console.error('Error in GET /api/error-log/:id:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Internal server error'
+    });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`Health check server is listening on port ${PORT}`);
+  console.log(`API endpoint: POST http://localhost:${PORT}/api/saveerrorlog`);
 });
 
 // 2. BOT SETUP
@@ -511,6 +619,12 @@ bot.onText(/^\/help$/, (msg) => {
     `   Decode base64 database credentials (filters _fin and _admin only)\n` +
     `   _Example:_ \`/de64 W3siREJFTkdJTkUiOi...\`\n` +
     `   _Returns:_ Prettified JSON with filtered credentials\n\n` +
+
+    `1️⃣5️⃣ */errorlog*\n` +
+    `   View error logs from external servers (Koyeb API)\n` +
+    `   _Examples:_\n` +
+    `   \`/errorlog\` - Show latest 10 logs\n` +
+    `   \`/errorlog <id>\` - Show specific log details\n\n` +
 
     `💡 _Tip: Type any command without parameters to see usage examples!_`;
 
@@ -1686,6 +1800,98 @@ bot.onText(/^\/clear$/, async (msg) => {
   } catch (err) {
     console.error("Error in /clear command:", err);
     bot.sendMessage(msg.chat.id, "❌ *Error!*\nSomething went wrong while clearing messages.", { parse_mode: 'Markdown' })
+      .then(msg => trackMessage(msg.chat.id, msg.message_id))
+      .catch(err => console.error("Error sending error message:", err));
+  }
+});
+
+// ==================== ERROR LOG COMMAND ====================
+bot.onText(/^\/errorlog(?:\s+(.+))?$/, async (msg, match) => {
+  trackCommand(msg.chat.id, msg.message_id);
+  try {
+    const subCommand = match[1] ? match[1].trim().toLowerCase() : null;
+
+    // /errorlog or /errorlog show - Show all error logs
+    if (!subCommand || subCommand === 'show') {
+      const logs = await getAllErrorLogs();
+
+      if (logs.length === 0) {
+        return bot.sendMessage(msg.chat.id,
+          `📋 *Error Logs*\n\n_No error logs found._`,
+          { parse_mode: 'Markdown' }
+        )
+          .then(m => trackMessage(m.chat.id, m.message_id))
+          .catch(err => console.error("Error:", err));
+      }
+
+      // Show latest 10 logs
+      const displayLogs = logs.slice(0, 10);
+      let message = `📋 *Error Logs* (${logs.length} total, showing latest 10)\n\n`;
+
+      for (const log of displayLogs) {
+        const date = new Date(log.created_date).toLocaleString('id-ID', {
+          timeZone: 'Asia/Jakarta',
+          dateStyle: 'short',
+          timeStyle: 'short'
+        });
+
+        // Truncate data for display
+        let dataPreview = log.data;
+        if (dataPreview.length > 100) {
+          dataPreview = dataPreview.substring(0, 100) + '...';
+        }
+
+        message += `🔸 *ID:* \`${log.id}\`\n`;
+        message += `   📅 ${date}\n`;
+        if (log.type_data) {
+          message += `   🏷️ Type: ${log.type_data}\n`;
+        }
+        message += `   📝 ${dataPreview}\n\n`;
+      }
+
+      if (logs.length > 10) {
+        message += `_Showing 10 of ${logs.length} logs. Use \`/errorlog <id>\` to view specific log._`;
+      }
+
+      return bot.sendMessage(msg.chat.id, message, { parse_mode: 'Markdown' })
+        .then(m => trackMessage(m.chat.id, m.message_id))
+        .catch(err => console.error("Error:", err));
+    }
+
+    // /errorlog <id> - Show specific log by ID
+    const logId = subCommand;
+    const log = await getErrorLogById(logId);
+
+    if (!log) {
+      return bot.sendMessage(msg.chat.id,
+        `❌ *Error log not found*\n\n_ID: ${logId}_`,
+        { parse_mode: 'Markdown' }
+      )
+        .then(m => trackMessage(m.chat.id, m.message_id))
+        .catch(err => console.error("Error:", err));
+    }
+
+    const date = new Date(log.created_date).toLocaleString('id-ID', {
+      timeZone: 'Asia/Jakarta',
+      dateStyle: 'medium',
+      timeStyle: 'medium'
+    });
+
+    let message = `📋 *Error Log Details*\n\n`;
+    message += `🔸 *ID:* \`${log.id}\`\n`;
+    message += `📅 *Date:* ${date}\n`;
+    if (log.type_data) {
+      message += `🏷️ *Type:* ${log.type_data}\n`;
+    }
+    message += `\n📝 *Data:*\n\`\`\`\n${log.data}\n\`\`\``;
+
+    return bot.sendMessage(msg.chat.id, message, { parse_mode: 'Markdown' })
+      .then(m => trackMessage(m.chat.id, m.message_id))
+      .catch(err => console.error("Error:", err));
+
+  } catch (err) {
+    console.error("Error in /errorlog command:", err);
+    bot.sendMessage(msg.chat.id, "❌ *Error!*\nSomething went wrong while fetching error logs.", { parse_mode: 'Markdown' })
       .then(msg => trackMessage(msg.chat.id, msg.message_id))
       .catch(err => console.error("Error sending error message:", err));
   }
