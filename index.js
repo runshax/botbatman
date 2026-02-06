@@ -2066,6 +2066,16 @@ bot.onText(/^\/errorlog(?:\s+(.+))?$/, async (msg, match) => {
         message += `<code>/errorlog clear</code> - Delete all logs`;
       }
 
+      // Mark the displayed 10 logs as reminded
+      const displayedIds = displayLogs
+        .filter(log => !log.status_reminder || log.status_reminder !== 'Y')
+        .map(log => log.id);
+
+      if (displayedIds.length > 0) {
+        await markErrorLogsAsReminded(displayedIds);
+        message += `\n\n<i>✅ Marked ${displayedIds.length} log(s) as reminded</i>`;
+      }
+
       return bot.sendMessage(msg.chat.id, message, { parse_mode: 'HTML' })
         .then(m => trackMessage(m.chat.id, m.message_id))
         .catch(err => console.error("Error:", err));
