@@ -6,7 +6,7 @@ const { parseFormula, addCustomFunction, getSupportedFunctions } = require('./se
 
 
 const { getTodayHoliday, getTomorrowHoliday, getUpcomingHolidays, formatDateIndonesian } = require('./services/indonesianHolidays');
-const { initDatabase, addCredential, getCredential, getCredentialBySfgo, getAllCredentials, deleteCredential, saveErrorLog, getAllErrorLogs, getErrorLogById } = require('./services/database');
+const { initDatabase, addCredential, getCredential, getCredentialBySfgo, getAllCredentials, deleteCredential, saveErrorLog, saveErrorLogBatch, getAllErrorLogs, getErrorLogById, deleteErrorLog, deleteAllErrorLogs } = require('./services/database');
 require('dotenv').config();
 
 // Verify fetch is available (Node.js 18+ has it built-in)
@@ -344,6 +344,109 @@ app.get('/api/error-log/:id', authenticateAPI, async (req, res) => {
   }
 });
 
+// Batch insert error logs
+app.post('/api/saveerrorlog/batch', authenticateAPI, async (req, res) => {
+  try {
+    const { errors } = req.body;
+
+    // Validation
+    if (!errors || !Array.isArray(errors) || errors.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing required field: errors (must be a non-empty array)'
+      });
+    }
+
+    // Validate each error object has required fields
+    for (let i = 0; i < errors.length; i++) {
+      if (!errors[i].data) {
+        return res.status(400).json({
+          success: false,
+          error: `Missing 'data' field in errors[${i}]`
+        });
+      }
+    }
+
+    // Save to database
+    const result = await saveErrorLogBatch(errors);
+
+    if (result.success) {
+      return res.status(201).json({
+        success: true,
+        message: `${result.count} error logs saved successfully`,
+        count: result.count,
+        ids: result.data.map(log => log.id)
+      });
+    } else {
+      return res.status(500).json({
+        success: false,
+        error: result.error
+      });
+    }
+  } catch (error) {
+    console.error('Error in /api/saveerrorlog/batch:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Internal server error'
+    });
+  }
+});
+
+// Delete error log by ID
+app.delete('/api/error-log/:id', authenticateAPI, async (req, res) => {
+  try {
+    const result = await deleteErrorLog(req.params.id);
+    if (result.success && result.deleted) {
+      return res.status(200).json({
+        success: true,
+        message: 'Error log deleted successfully',
+        data: result.data
+      });
+    } else if (result.success && !result.deleted) {
+      return res.status(404).json({
+        success: false,
+        error: 'Error log not found'
+      });
+    } else {
+      return res.status(500).json({
+        success: false,
+        error: result.error
+      });
+    }
+  } catch (error) {
+    console.error('Error in DELETE /api/error-log/:id:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Internal server error'
+    });
+  }
+});
+
+// Delete all error logs
+app.delete('/api/error-log', authenticateAPI, async (req, res) => {
+  try {
+    const result = await deleteAllErrorLogs();
+    if (result.success) {
+      return res.status(200).json({
+        success: true,
+        message: `${result.count} error logs deleted successfully`,
+        count: result.count
+      });
+    } else {
+      return res.status(500).json({
+        success: false,
+        error: result.error
+      });
+    }
+  } catch (error) {
+    console.error('Error in DELETE /api/error-log:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Internal server error'
+    });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`Health check server is listening on port ${PORT}`);
   console.log(`API endpoint: POST http://localhost:${PORT}/api/saveerrorlog`);
@@ -624,7 +727,8 @@ bot.onText(/^\/help$/, (msg) => {
     `   View error logs from external servers (Koyeb API)\n` +
     `   _Examples:_\n` +
     `   \`/errorlog\` - Show latest 10 logs\n` +
-    `   \`/errorlog <id>\` - Show specific log details\n\n` +
+    `   \`/errorlog <id>\` - Show specific log details\n` +
+    `   \`/errorlog clear\` - Delete all error logs\n\n` +
 
     `💡 _Tip: Type any command without parameters to see usage examples!_`;
 
@@ -1809,10 +1913,30 @@ bot.onText(/^\/clear$/, async (msg) => {
 bot.onText(/^\/errorlog(?:\s+(.+))?$/, async (msg, match) => {
   trackCommand(msg.chat.id, msg.message_id);
   try {
-    const subCommand = match[1] ? match[1].trim().toLowerCase() : null;
+    const subCommand = match[1] ? match[1].trim() : null;
+
+    // /errorlog clear - Delete all error logs
+    if (subCommand && subCommand.toLowerCase() === 'clear') {
+      const result = await deleteAllErrorLogs();
+      if (result.success) {
+        return bot.sendMessage(msg.chat.id,
+          `✅ <b>Deleted ${result.count} error logs</b>`,
+          { parse_mode: 'HTML' }
+        )
+          .then(m => trackMessage(m.chat.id, m.message_id))
+          .catch(err => console.error("Error:", err));
+      } else {
+        return bot.sendMessage(msg.chat.id,
+          `❌ <b>Error deleting logs:</b> ${result.error}`,
+          { parse_mode: 'HTML' }
+        )
+          .then(m => trackMessage(m.chat.id, m.message_id))
+          .catch(err => console.error("Error:", err));
+      }
+    }
 
     // /errorlog or /errorlog show - Show all error logs
-    if (!subCommand || subCommand === 'show') {
+    if (!subCommand || subCommand.toLowerCase() === 'show') {
       const logs = await getAllErrorLogs();
 
       if (logs.length === 0) {
@@ -1835,8 +1959,16 @@ bot.onText(/^\/errorlog(?:\s+(.+))?$/, async (msg, match) => {
           timeStyle: 'short'
         });
 
-        // Truncate data for display
+        // Try to prettify JSON data
         let dataPreview = log.data;
+        try {
+          const parsed = JSON.parse(log.data);
+          dataPreview = JSON.stringify(parsed, null, 2);
+        } catch (e) {
+          // Not JSON, use as-is
+        }
+
+        // Truncate data for display
         if (dataPreview.length > 100) {
           dataPreview = dataPreview.substring(0, 100) + '...';
         }
@@ -1847,7 +1979,7 @@ bot.onText(/^\/errorlog(?:\s+(.+))?$/, async (msg, match) => {
           .replace(/</g, '&lt;')
           .replace(/>/g, '&gt;');
 
-        message += `🔸 <b>ID:</b> <code>${log.id}</code>\n`;
+        message += `🔸 <b>ID:</b> <code>${log.id.substring(0, 8)}</code>\n`;
         message += `   📅 ${date}\n`;
         if (log.type_data) {
           message += `   🏷️ Type: ${log.type_data}\n`;
@@ -1856,7 +1988,9 @@ bot.onText(/^\/errorlog(?:\s+(.+))?$/, async (msg, match) => {
       }
 
       if (logs.length > 10) {
-        message += `<i>Showing 10 of ${logs.length} logs. Use /errorlog &lt;id&gt; to view specific log.</i>`;
+        message += `\n<i>💡 Commands:</i>\n`;
+        message += `<code>/errorlog &lt;id&gt;</code> - View full log\n`;
+        message += `<code>/errorlog clear</code> - Delete all logs`;
       }
 
       return bot.sendMessage(msg.chat.id, message, { parse_mode: 'HTML' })
@@ -1864,9 +1998,10 @@ bot.onText(/^\/errorlog(?:\s+(.+))?$/, async (msg, match) => {
         .catch(err => console.error("Error:", err));
     }
 
-    // /errorlog <id> - Show specific log by ID
+    // /errorlog <id> - Show specific log by ID (accepts partial ID)
     const logId = subCommand;
-    const log = await getErrorLogById(logId);
+    const logs = await getAllErrorLogs();
+    const log = logs.find(l => l.id.startsWith(logId)) || await getErrorLogById(logId);
 
     if (!log) {
       return bot.sendMessage(msg.chat.id,
@@ -1883,8 +2018,17 @@ bot.onText(/^\/errorlog(?:\s+(.+))?$/, async (msg, match) => {
       timeStyle: 'medium'
     });
 
+    // Try to prettify JSON data
+    let displayData = log.data;
+    try {
+      const parsed = JSON.parse(log.data);
+      displayData = JSON.stringify(parsed, null, 2);
+    } catch (e) {
+      // Not JSON, use as-is
+    }
+
     // Escape HTML special characters in data
-    const escapedData = log.data
+    const escapedData = displayData
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;');

@@ -158,6 +158,55 @@ const getErrorLogById = async (id) => {
   }
 };
 
+// Delete error log by ID
+const deleteErrorLog = async (id) => {
+  try {
+    const result = await pool.query(
+      'DELETE FROM error_msg_log WHERE id = $1 RETURNING *',
+      [id]
+    );
+    return { success: true, deleted: result.rowCount > 0, data: result.rows[0] };
+  } catch (err) {
+    console.error('Error deleting error log:', err);
+    return { success: false, error: err.message };
+  }
+};
+
+// Delete all error logs
+const deleteAllErrorLogs = async () => {
+  try {
+    const result = await pool.query('DELETE FROM error_msg_log RETURNING id');
+    return { success: true, count: result.rowCount };
+  } catch (err) {
+    console.error('Error deleting all error logs:', err);
+    return { success: false, error: err.message };
+  }
+};
+
+// Batch insert error logs (for multiple errors in one request)
+const saveErrorLogBatch = async (errorArray) => {
+  try {
+    if (!Array.isArray(errorArray) || errorArray.length === 0) {
+      return { success: false, error: 'Invalid input: expected non-empty array' };
+    }
+
+    const insertedLogs = [];
+    for (const errorItem of errorArray) {
+      const dataString = typeof errorItem.data === 'string' ? errorItem.data : JSON.stringify(errorItem.data);
+      const result = await pool.query(
+        'INSERT INTO error_msg_log (data, type_data) VALUES ($1, $2) RETURNING *',
+        [dataString, errorItem.type_data || null]
+      );
+      insertedLogs.push(result.rows[0]);
+    }
+
+    return { success: true, count: insertedLogs.length, data: insertedLogs };
+  } catch (err) {
+    console.error('Error batch saving error logs:', err);
+    return { success: false, error: err.message };
+  }
+};
+
 module.exports = {
   initDatabase,
   addCredential,
@@ -166,6 +215,9 @@ module.exports = {
   getAllCredentials,
   deleteCredential,
   saveErrorLog,
+  saveErrorLogBatch,
   getAllErrorLogs,
-  getErrorLogById
+  getErrorLogById,
+  deleteErrorLog,
+  deleteAllErrorLogs
 };
