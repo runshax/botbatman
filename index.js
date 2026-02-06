@@ -6,7 +6,7 @@ const { parseFormula, addCustomFunction, getSupportedFunctions } = require('./se
 
 
 const { getTodayHoliday, getTomorrowHoliday, getUpcomingHolidays, formatDateIndonesian } = require('./services/indonesianHolidays');
-const { initDatabase, addCredential, getCredential, getCredentialBySfgo, getAllCredentials, deleteCredential, saveErrorLog, saveErrorLogBatch, getAllErrorLogs, getErrorLogById, deleteErrorLog, deleteAllErrorLogs } = require('./services/database');
+const { initDatabase, addCredential, getCredential, getCredentialBySfgo, getAllCredentials, deleteCredential, saveErrorLog, saveErrorLogBatch, getAllErrorLogs, getErrorLogById, deleteErrorLog, deleteAllErrorLogs, getUnremindedErrorLogs, markErrorLogsAsReminded } = require('./services/database');
 require('dotenv').config();
 
 // Verify fetch is available (Node.js 18+ has it built-in)
@@ -260,8 +260,81 @@ const authenticateAPI = (req, res, next) => {
 };
 
 // Health check endpoint (no auth needed)
-app.get('/', (req, res) => {
+app.get('/', async (req, res) => {
   res.send('Bot is online and healthy! 🚀');
+
+  // Auto-send unreminded error logs to Telegram
+  try {
+    const unremindedLogs = await getUnremindedErrorLogs();
+
+    if (unremindedLogs.length > 0) {
+      console.log(`Found ${unremindedLogs.length} unreminded error logs, sending to Telegram...`);
+
+      // Show only first 5
+      const displayLogs = unremindedLogs.slice(0, 5);
+      const remainingLogs = unremindedLogs.slice(5);
+
+      // Prepare message - same format as /errorlog command
+      let message = `🚨 <b>New Error Logs</b> (${unremindedLogs.length} total, showing 5)\n\n`;
+
+      for (const log of displayLogs) {
+        const date = new Date(log.created_date).toLocaleString('id-ID', {
+          timeZone: 'Asia/Jakarta',
+          dateStyle: 'short',
+          timeStyle: 'short'
+        });
+
+        // Try to prettify JSON data
+        let dataPreview = log.data;
+        try {
+          const parsed = JSON.parse(log.data);
+          dataPreview = JSON.stringify(parsed, null, 2);
+        } catch (e) {
+          // Not JSON, use as-is
+        }
+
+        // Truncate data for display
+        if (dataPreview.length > 100) {
+          dataPreview = dataPreview.substring(0, 100) + '...';
+        }
+
+        // Escape HTML special characters
+        dataPreview = dataPreview
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;');
+
+        message += `🔸 <b>ID:</b> <code>${log.id.substring(0, 8)}</code>\n`;
+        message += `   📅 ${date}\n`;
+        if (log.type_data) {
+          message += `   🏷️ Type: ${log.type_data}\n`;
+        }
+        message += `   📝 ${dataPreview}\n\n`;
+      }
+
+      // If there are more than 5, show remaining IDs
+      if (remainingLogs.length > 0) {
+        const remainingIds = remainingLogs.map(log => log.id.substring(0, 8)).join(', ');
+        message += `\n<i>⚠️ Additional ${remainingLogs.length} error(s) not shown:</i>\n`;
+        message += `<code>${remainingIds}</code>\n`;
+        message += `<i>Use /errorlog &lt;id&gt; to view and mark as reminded</i>`;
+      }
+
+      // Send to Telegram
+      const chatId = process.env.CHAT_ID;
+      if (chatId) {
+        await bot.sendMessage(chatId, message, { parse_mode: 'HTML' });
+
+        // Mark ONLY the displayed 5 as reminded
+        const displayedIds = displayLogs.map(log => log.id);
+        await markErrorLogsAsReminded(displayedIds);
+
+        console.log(`Sent ${displayLogs.length} error logs to Telegram and marked as reminded. ${remainingLogs.length} remaining.`);
+      }
+    }
+  } catch (err) {
+    console.error('Error in health check auto-reminder:', err);
+  }
 });
 
 // API endpoint to save error logs from external servers
@@ -2040,6 +2113,12 @@ bot.onText(/^\/errorlog(?:\s+(.+))?$/, async (msg, match) => {
       message += `🏷️ <b>Type:</b> ${log.type_data}\n`;
     }
     message += `\n📝 <b>Data:</b>\n<pre>${escapedData}</pre>`;
+
+    // Mark as reminded when viewed
+    if (!log.status_reminder || log.status_reminder !== 'Y') {
+      await markErrorLogsAsReminded([log.id]);
+      message += `\n\n<i>✅ Marked as reminded</i>`;
+    }
 
     return bot.sendMessage(msg.chat.id, message, { parse_mode: 'HTML' })
       .then(m => trackMessage(m.chat.id, m.message_id))

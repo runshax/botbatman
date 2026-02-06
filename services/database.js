@@ -31,8 +31,15 @@ const initDatabase = async () => {
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         created_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         data TEXT NOT NULL,
-        type_data VARCHAR(255)
+        type_data VARCHAR(255),
+        status_reminder VARCHAR(1) DEFAULT NULL
       )
+    `);
+
+    // Add status_reminder column if it doesn't exist (for existing tables)
+    await pool.query(`
+      ALTER TABLE error_msg_log
+      ADD COLUMN IF NOT EXISTS status_reminder VARCHAR(1) DEFAULT NULL
     `);
 
     console.log('Database tables initialized successfully');
@@ -207,6 +214,47 @@ const saveErrorLogBatch = async (errorArray) => {
   }
 };
 
+// Get unreminded error logs (status_reminder is NULL or empty)
+const getUnremindedErrorLogs = async () => {
+  try {
+    const result = await pool.query(
+      "SELECT * FROM error_msg_log WHERE status_reminder IS NULL OR status_reminder = '' ORDER BY created_date ASC"
+    );
+    return result.rows;
+  } catch (err) {
+    console.error('Error getting unreminded error logs:', err);
+    return [];
+  }
+};
+
+// Mark error log as reminded
+const markErrorLogAsReminded = async (id) => {
+  try {
+    const result = await pool.query(
+      "UPDATE error_msg_log SET status_reminder = 'Y' WHERE id = $1 RETURNING *",
+      [id]
+    );
+    return { success: true, data: result.rows[0] };
+  } catch (err) {
+    console.error('Error marking error log as reminded:', err);
+    return { success: false, error: err.message };
+  }
+};
+
+// Mark multiple error logs as reminded
+const markErrorLogsAsReminded = async (ids) => {
+  try {
+    const result = await pool.query(
+      "UPDATE error_msg_log SET status_reminder = 'Y' WHERE id = ANY($1) RETURNING id",
+      [ids]
+    );
+    return { success: true, count: result.rowCount };
+  } catch (err) {
+    console.error('Error marking error logs as reminded:', err);
+    return { success: false, error: err.message };
+  }
+};
+
 module.exports = {
   initDatabase,
   addCredential,
@@ -219,5 +267,8 @@ module.exports = {
   getAllErrorLogs,
   getErrorLogById,
   deleteErrorLog,
-  deleteAllErrorLogs
+  deleteAllErrorLogs,
+  getUnremindedErrorLogs,
+  markErrorLogAsReminded,
+  markErrorLogsAsReminded
 };
