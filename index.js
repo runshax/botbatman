@@ -1841,6 +1841,28 @@ bot.onText(/^\/errorlog(?:\s+(.+))?$/, async (msg, match) => {
           dataPreview = dataPreview.substring(0, 100) + '...';
         }
 
+        // Escape markdown special characters in data preview
+        dataPreview = dataPreview
+          .replace(/\\/g, '\\\\')
+          .replace(/`/g, '\\`')
+          .replace(/\*/g, '\\*')
+          .replace(/_/g, '\\_')
+          .replace(/\[/g, '\\[')
+          .replace(/\]/g, '\\]')
+          .replace(/\(/g, '\\(')
+          .replace(/\)/g, '\\)')
+          .replace(/~/g, '\\~')
+          .replace(/>/g, '\\>')
+          .replace(/#/g, '\\#')
+          .replace(/\+/g, '\\+')
+          .replace(/-/g, '\\-')
+          .replace(/=/g, '\\=')
+          .replace(/\|/g, '\\|')
+          .replace(/\{/g, '\\{')
+          .replace(/\}/g, '\\}')
+          .replace(/\./g, '\\.')
+          .replace(/!/g, '\\!');
+
         message += `🔸 *ID:* \`${log.id}\`\n`;
         message += `   📅 ${date}\n`;
         if (log.type_data) {
