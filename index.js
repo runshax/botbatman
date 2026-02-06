@@ -284,30 +284,33 @@ app.get('/', async (req, res) => {
       let message = `🚨 <b>New Error Logs</b> (${unremindedLogs.length} total, showing 5)\n\n`;
 
       for (const log of displayLogs) {
-        // Format date as YYYY-MM-DD HH:MM
-        const dateObj = new Date(log.created_date);
-        const year = dateObj.getFullYear();
-        const month = String(dateObj.getMonth() + 1).padStart(2, '0');
-        const day = String(dateObj.getDate()).padStart(2, '0');
-        const hours = String(dateObj.getHours()).padStart(2, '0');
-        const minutes = String(dateObj.getMinutes()).padStart(2, '0');
-        const date = `${year}-${month}-${day} ${hours}:${minutes}`;
+        const date = new Date(log.created_date).toLocaleString('id-ID', {
+          timeZone: 'Asia/Jakarta',
+          dateStyle: 'short',
+          timeStyle: 'short'
+        });
 
-        // Try to format JSON as clean key:value pairs
+        // Try to prettify JSON data and format nicely (same as /errorlog command)
         let dataPreview = log.data;
         try {
           const parsed = JSON.parse(log.data);
-          // Convert to clean format: key: value (no quotes, no braces)
-          dataPreview = Object.entries(parsed)
-            .map(([key, value]) => `${key}: ${value}`)
-            .join(', ');
+          // Format with indentation, then split into lines
+          const formatted = JSON.stringify(parsed, null, 2);
+          const lines = formatted.split('\n');
+
+          // Remove opening and closing braces, keep only content
+          if (lines[0] === '{' && lines[lines.length - 1] === '}') {
+            dataPreview = lines.slice(1, -1).join('\n').trim();
+          } else {
+            dataPreview = formatted;
+          }
         } catch (e) {
           // Not JSON, use as-is
         }
 
-        // Truncate data for display
-        if (dataPreview.length > 400) {
-          dataPreview = dataPreview.substring(0, 400) + '...';
+        // Truncate data for display if longer than 800 characters
+        if (dataPreview.length > 800) {
+          dataPreview = dataPreview.substring(0, 800) + '...';
         }
 
         // Escape HTML special characters
@@ -2122,18 +2125,27 @@ bot.onText(/^\/errorlog(?:\s+(.+))?$/, async (msg, match) => {
           timeStyle: 'short'
         });
 
-        // Try to prettify JSON data
+        // Try to prettify JSON data and format nicely
         let dataPreview = log.data;
         try {
           const parsed = JSON.parse(log.data);
-          dataPreview = JSON.stringify(parsed, null, 2);
+          // Format with indentation, then split into lines
+          const formatted = JSON.stringify(parsed, null, 2);
+          const lines = formatted.split('\n');
+
+          // Remove opening and closing braces, keep only content
+          if (lines[0] === '{' && lines[lines.length - 1] === '}') {
+            dataPreview = lines.slice(1, -1).join('\n').trim();
+          } else {
+            dataPreview = formatted;
+          }
         } catch (e) {
           // Not JSON, use as-is
         }
 
-        // Truncate data for display
-        if (dataPreview.length > 100) {
-          dataPreview = dataPreview.substring(0, 100) + '...';
+        // Truncate data for display if longer than 800 characters
+        if (dataPreview.length > 800) {
+          dataPreview = dataPreview.substring(0, 800) + '...';
         }
 
         // Escape HTML special characters only
