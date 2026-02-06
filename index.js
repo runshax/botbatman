@@ -263,7 +263,13 @@ const authenticateAPI = (req, res, next) => {
 app.get('/', async (req, res) => {
   res.send('Bot is online and healthy! 🚀');
 
-  // Auto-send unreminded error logs to Telegram
+  // Auto-send unreminded error logs to Telegram (only if REMINDER_ERROR is true)
+  const reminderEnabled = process.env.REMINDER_ERROR === 'true';
+
+  if (!reminderEnabled) {
+    return; // Skip auto-reminder if disabled
+  }
+
   try {
     const unremindedLogs = await getUnremindedErrorLogs();
 

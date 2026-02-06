@@ -27,6 +27,25 @@ API_KEY=your_secret_api_key_here
 
 ---
 
+## Environment Variables
+
+Configure these variables in your `.env` file:
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `API_KEY` | Yes | - | API key for authentication |
+| `BOT_TOKEN` | Yes | - | Telegram bot token |
+| `CHAT_ID` | Yes | - | Default Telegram chat ID for notifications |
+| `DATABASE_URL` | Yes | - | PostgreSQL connection string |
+| `REMINDER_ERROR` | No | `true` | Enable/disable auto-reminder on health check (`true` or `false`) |
+| `PORT` | No | `8080` | Server port |
+
+**Auto-Reminder Feature:**
+- When `REMINDER_ERROR=true`: Health check endpoint (`/`) automatically sends unreminded error logs to Telegram
+- When `REMINDER_ERROR=false`: Auto-reminder is disabled (useful for testing or when you want manual control)
+
+---
+
 ## Base URL
 
 **Local Development:**
