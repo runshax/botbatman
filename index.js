@@ -284,17 +284,23 @@ app.get('/', async (req, res) => {
       let message = `🚨 <b>New Error Logs</b> (${unremindedLogs.length} total, showing 5)\n\n`;
 
       for (const log of displayLogs) {
-        const date = new Date(log.created_date).toLocaleString('id-ID', {
-          timeZone: 'Asia/Jakarta',
-          dateStyle: 'short',
-          timeStyle: 'short'
-        });
+        // Format date as YYYY-MM-DD HH:MM
+        const dateObj = new Date(log.created_date);
+        const year = dateObj.getFullYear();
+        const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+        const day = String(dateObj.getDate()).padStart(2, '0');
+        const hours = String(dateObj.getHours()).padStart(2, '0');
+        const minutes = String(dateObj.getMinutes()).padStart(2, '0');
+        const date = `${year}-${month}-${day} ${hours}:${minutes}`;
 
-        // Try to prettify JSON data
+        // Try to format JSON as clean key:value pairs
         let dataPreview = log.data;
         try {
           const parsed = JSON.parse(log.data);
-          dataPreview = JSON.stringify(parsed, null, 2);
+          // Convert to clean format: key: value (no quotes, no braces)
+          dataPreview = Object.entries(parsed)
+            .map(([key, value]) => `${key}: ${value}`)
+            .join(', ');
         } catch (e) {
           // Not JSON, use as-is
         }
