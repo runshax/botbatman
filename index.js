@@ -725,6 +725,77 @@ cron.schedule('40 10 * * 1-5', () => {
   timezone: timezone
 });
 
+// Daily 7:30 AM - Send unchecked error logs as file
+cron.schedule('30 7 * * *', async () => {
+  try {
+    console.log('Running daily error log report at 7:30 AM...');
+
+    // Get all unreminded error logs
+    const unremindedLogs = await getUnremindedErrorLogs();
+
+    // If no logs, don't send anything
+    if (unremindedLogs.length === 0) {
+      console.log('No unchecked error logs found');
+      return;
+    }
+
+    // Generate TXT file content
+    const fs = require('fs');
+    const path = require('path');
+    const today = new Date().toISOString().split('T')[0];
+
+    let txtContent = `Unchecked Error Logs Report\n`;
+    txtContent += `Generated: ${new Date().toISOString()}\n`;
+    txtContent += `Total: ${unremindedLogs.length} unchecked log(s)\n`;
+    txtContent += `${'='.repeat(80)}\n\n`;
+
+    for (const log of unremindedLogs) {
+      const date = new Date(log.created_date).toLocaleString('id-ID', {
+        timeZone: 'Asia/Jakarta'
+      });
+
+      txtContent += `ID: ${log.id}\n`;
+      txtContent += `Date: ${date}\n`;
+      if (log.type_data) {
+        txtContent += `Type: ${log.type_data}\n`;
+      }
+      txtContent += `Status: ${log.status_reminder || 'Not reminded'}\n`;
+      txtContent += `Data:\n${log.data}\n`;
+      txtContent += `${'-'.repeat(80)}\n\n`;
+    }
+
+    // Save to temp file
+    const tempDir = path.join(__dirname, 'temp');
+    if (!fs.existsSync(tempDir)) {
+      fs.mkdirSync(tempDir, { recursive: true });
+    }
+
+    const fileName = `unchecked_errorlogs_${today}.txt`;
+    const filePath = path.join(tempDir, fileName);
+    fs.writeFileSync(filePath, txtContent, 'utf8');
+
+    // Send file to Telegram
+    const chatId = process.env.CHAT_ID;
+    if (chatId) {
+      await bot.sendDocument(chatId, filePath, {
+        caption: `📋 *Daily Error Log Report*\n\nHere are all error logs that haven't been checked (${unremindedLogs.length} total)\n\nUse /errorlog to mark them as checked.`,
+        parse_mode: 'Markdown'
+      });
+
+      console.log(`Sent daily error log report: ${unremindedLogs.length} unchecked logs`);
+    }
+
+    // Delete temp file
+    fs.unlinkSync(filePath);
+
+  } catch (error) {
+    console.error('Error in daily error log report:', error);
+  }
+}, {
+  scheduled: true,
+  timezone: timezone
+});
+
 // Error handling for polling errors
 bot.on('polling_error', (error) => {
   console.error('Polling error:', error.code, error.message);

@@ -214,11 +214,11 @@ const saveErrorLogBatch = async (errorArray) => {
   }
 };
 
-// Get unreminded error logs (status_reminder is NULL or empty)
+// Get unreminded error logs (status_reminder is NULL or empty) - ORDER BY DESC for latest first
 const getUnremindedErrorLogs = async () => {
   try {
     const result = await pool.query(
-      "SELECT * FROM error_msg_log WHERE status_reminder IS NULL OR status_reminder = '' ORDER BY created_date ASC"
+      "SELECT * FROM error_msg_log WHERE (status_reminder IS NULL OR status_reminder = '' OR status_reminder != 'Y') ORDER BY created_date DESC"
     );
     return result.rows;
   } catch (err) {
