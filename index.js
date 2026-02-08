@@ -968,14 +968,35 @@ bot.onText(/^\/dev(?:\s+(.+))?$/, async (msg, match) => {
       // Add database credentials with username (compact format)
       for (const cred of dbCreds) {
         const sfgoOnly = cred.sfgo.split('|')[0].replace('-dev-gd', '');
+        // Escape Markdown special characters in username and sfgo
+        const escapedUsername = cred.username
+          .replace(/_/g, '\\_')
+          .replace(/\*/g, '\\*')
+          .replace(/\[/g, '\\[')
+          .replace(/\]/g, '\\]')
+          .replace(/\(/g, '\\(')
+          .replace(/\)/g, '\\)')
+          .replace(/~/g, '\\~')
+          .replace(/`/g, '\\`')
+          .replace(/>/g, '\\>')
+          .replace(/#/g, '\\#')
+          .replace(/\+/g, '\\+')
+          .replace(/-/g, '\\-')
+          .replace(/=/g, '\\=')
+          .replace(/\|/g, '\\|')
+          .replace(/\{/g, '\\{')
+          .replace(/\}/g, '\\}')
+          .replace(/\./g, '\\.')
+          .replace(/!/g, '\\!');
+
         // Compact format: Country | Username | SFGO on one line
-        allCreds.push(`🌐 ${cred.country.toUpperCase()} | ${cred.username} | ${sfgoOnly}`);
+        allCreds.push(`🌐 ${cred.country.toUpperCase()} \\| ${escapedUsername} \\| ${sfgoOnly}`);
       }
 
       if (allCreds.length > 0) {
         response = `🔐 *All Regional Credentials*\n\n` +
           allCreds.join('\n') +
-          `\n\n_Type "/dev XXXX" or "/dev sfgoXXXX" for password._\n_Type "/dev add country / username / password / sfgo" to add._`;
+          `\n\n_Type "/dev XXXX" or "/dev sfgoXXXX" for password\\._\n_Type "/dev add country / username / password / sfgo" to add\\._`;
       } else {
         response = `❌ *No credentials found!*\n\nUse \`/dev add COUNTRY / username / password / sfgoXXXX\` to add`;
       }
