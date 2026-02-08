@@ -1077,11 +1077,13 @@ bot.onText(/^\/dev(?:\s+(.+))?$/, async (msg, match) => {
       }
 
       if (allCreds.length > 0) {
-        response = `🔐 *All Regional Credentials*\n\n` +
+        response = `🔐 All Regional Credentials\n\n` +
           allCreds.join('\n') +
-          `\n\n_Type "/dev XXXX" or "/dev sfgoXXXX" for password._\n_Type "/dev add country / username / password / sfgo" to add._`;
+          `\n\nType "/dev XXXX" or "/dev sfgoXXXX" for password.\nType "/dev add country / username / password / sfgo" to add.`;
+        useMarkdown = false; // Don't use Markdown to avoid parsing errors
       } else {
-        response = `❌ *No credentials found!*\n\nUse \`/dev add COUNTRY / username / password / sfgoXXXX\` to add`;
+        response = `❌ No credentials found!\n\nUse /dev add COUNTRY / username / password / sfgoXXXX to add`;
+        useMarkdown = false;
       }
     } catch (err) {
       console.error('Error getting credentials:', err);
