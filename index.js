@@ -1071,9 +1071,9 @@ bot.onText(/^\/dev(?:\s+(.+))?$/, async (msg, match) => {
       // Add database credentials with username (compact format)
       for (const cred of dbCreds) {
         const sfgoOnly = cred.sfgo.split('|')[0].replace('-dev-gd', '');
-        // Use plain text format instead of Markdown to avoid escaping issues
-        // Format: Country, Username, SFGO
-        allCreds.push(`🌐 ${cred.country.toUpperCase()}, ${cred.username}, ${sfgoOnly}`);
+        // Use || as separator (double pipe) - won't conflict with | in usernames
+        // Format: Country || Username || SFGO
+        allCreds.push(`🌐 ${cred.country.toUpperCase()} || ${cred.username} || ${sfgoOnly}`);
       }
 
       if (allCreds.length > 0) {
