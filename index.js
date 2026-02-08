@@ -957,26 +957,31 @@ bot.onText(/^\/dev(?:\s+(.+))?$/, async (msg, match) => {
     }
   } else {
     // No country specified - show all from database only
-    const dbCreds = await getAllCredentials();
+    try {
+      const dbCreds = await getAllCredentials();
 
-    // Sort by country
-    dbCreds.sort((a, b) => a.country.localeCompare(b.country));
+      // Sort by country
+      dbCreds.sort((a, b) => a.country.localeCompare(b.country));
 
-    const allCreds = [];
+      const allCreds = [];
 
-    // Add database credentials with username (compact format)
-    for (const cred of dbCreds) {
-      const sfgoOnly = cred.sfgo.split('|')[0].replace('-dev-gd', '');
-      // Compact format: Country | Username | SFGO on one line
-      allCreds.push(`🌐 ${cred.country.toUpperCase()} | ${cred.username} | ${sfgoOnly}`);
-    }
+      // Add database credentials with username (compact format)
+      for (const cred of dbCreds) {
+        const sfgoOnly = cred.sfgo.split('|')[0].replace('-dev-gd', '');
+        // Compact format: Country | Username | SFGO on one line
+        allCreds.push(`🌐 ${cred.country.toUpperCase()} | ${cred.username} | ${sfgoOnly}`);
+      }
 
-    if (allCreds.length > 0) {
-      response = `🔐 *All Regional Credentials*\n\n` +
-        allCreds.join('\n') +
-        `\n\n_Type "/dev XXXX" or "/dev sfgoXXXX" for password._\n_Type "/dev add country / username / password / sfgo" to add._`;
-    } else {
-      response = `❌ *No credentials found!*\n\nUse \`/dev add COUNTRY / username / password / sfgoXXXX\` to add`;
+      if (allCreds.length > 0) {
+        response = `🔐 *All Regional Credentials*\n\n` +
+          allCreds.join('\n') +
+          `\n\n_Type "/dev XXXX" or "/dev sfgoXXXX" for password._\n_Type "/dev add country / username / password / sfgo" to add._`;
+      } else {
+        response = `❌ *No credentials found!*\n\nUse \`/dev add COUNTRY / username / password / sfgoXXXX\` to add`;
+      }
+    } catch (err) {
+      console.error('Error getting credentials:', err);
+      response = `❌ *Database error!*\n\nCould not retrieve credentials. Please check logs.`;
     }
   }
 
