@@ -325,21 +325,27 @@ app.get('/', async (req, res) => {
         const minutes = String(dateObj.getMinutes()).padStart(2, '0');
         const date = `${year}-${month}-${day} ${hours}:${minutes}`;
 
-        // Try to format JSON as clean key:value pairs
+        // Try to prettify JSON data and format nicely (same as /errorlog command)
         let dataPreview = log.data;
         try {
           const parsed = JSON.parse(log.data);
-          // Convert to clean format: key: value (no quotes, no braces)
-          dataPreview = Object.entries(parsed)
-            .map(([key, value]) => `${key}: ${value}`)
-            .join(', ');
+          // Format with indentation, then split into lines
+          const formatted = JSON.stringify(parsed, null, 2);
+          const lines = formatted.split('\n');
+
+          // Remove opening and closing braces, keep only content
+          if (lines[0] === '{' && lines[lines.length - 1] === '}') {
+            dataPreview = lines.slice(1, -1).join('\n').trim();
+          } else {
+            dataPreview = formatted;
+          }
         } catch (e) {
           // Not JSON, use as-is
         }
 
-        // Truncate data for display
-        if (dataPreview.length > 400) {
-          dataPreview = dataPreview.substring(0, 400) + '...';
+        // Truncate data for display if longer than 800 characters
+        if (dataPreview.length > 800) {
+          dataPreview = dataPreview.substring(0, 800) + '...';
         }
 
         // Escape HTML special characters
