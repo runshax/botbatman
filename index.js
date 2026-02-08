@@ -273,15 +273,47 @@ app.get('/', async (req, res) => {
   try {
     const unremindedLogs = await getUnremindedErrorLogs();
 
-    if (unremindedLogs.length > 0) {
-      console.log(`Found ${unremindedLogs.length} unreminded error logs, sending to Telegram...`);
+    // Filter out query/database errors - only show actual application errors
+    const actualErrors = unremindedLogs.filter(log => {
+      try {
+        const parsed = JSON.parse(log.data);
 
-      // Show only first 5
-      const displayLogs = unremindedLogs.slice(0, 5);
-      const remainingLogs = unremindedLogs.slice(5);
+        // Skip if it's a database/query error (check file field)
+        if (parsed.file && (
+          parsed.file.includes('QueryFailedError') ||
+          parsed.file.includes('ConnectionError') ||
+          parsed.file.includes('DatabaseError')
+        )) {
+          return false;
+        }
+
+        // Skip if message contains database error keywords
+        if (parsed.message) {
+          const msgLower = parsed.message.toLowerCase();
+          if (msgLower.includes('duplicate entry') ||
+              msgLower.includes('connection refused') ||
+              msgLower.includes('query failed') ||
+              msgLower.includes('database error')) {
+            return false;
+          }
+        }
+
+        return true; // It's an actual application error
+      } catch (e) {
+        // If not valid JSON, include it (plain text errors)
+        return true;
+      }
+    });
+
+    if (actualErrors.length > 0) {
+      console.log(`Found ${actualErrors.length} actual error logs (filtered from ${unremindedLogs.length} total), sending to Telegram...`);
+
+      // Show only first 5 from actual errors
+      const displayLogs = actualErrors.slice(0, 5);
+      const remainingLogs = actualErrors.slice(5);
 
       // Prepare message - same format as /errorlog command
-      let message = `🚨 <b>New Error Logs</b> (${unremindedLogs.length} total, showing 5)\n\n`;
+      let message = `🚨 <b>New Error Logs</b> (${actualErrors.length} total, showing 5)\n\n`;
 
       for (const log of displayLogs) {
         // Format date as YYYY-MM-DD HH:MM
