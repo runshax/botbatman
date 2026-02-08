@@ -270,6 +270,17 @@ app.get('/', async (req, res) => {
     return; // Skip auto-reminder if disabled
   }
 
+  // Check time - don't send reminders after 7 PM (Asia/Jakarta timezone)
+  // Morning report at 7:30 AM will handle unchecked errors from previous night
+  const now = new Date();
+  const jakartaTime = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Jakarta' }));
+  const currentHour = jakartaTime.getHours();
+
+  if (currentHour >= 19) { // After 7 PM (19:00)
+    console.log('Skipping auto-reminder after 7 PM - will be included in morning report');
+    return;
+  }
+
   try {
     const unremindedLogs = await getUnremindedErrorLogs();
 
