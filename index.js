@@ -774,31 +774,37 @@ cron.schedule('40 10 * * 1-5', () => {
   timezone: timezone
 });
 
-// Daily 7:30 AM - Send unchecked error logs as file
+// Daily 7:30 AM - Send ALL error logs from yesterday (previous day)
 cron.schedule('30 7 * * *', async () => {
   try {
     console.log('Running daily error log report at 7:30 AM...');
 
-    // Get all unreminded error logs
-    const unremindedLogs = await getUnremindedErrorLogs();
+    // Get yesterday's date (today - 1 day)
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = yesterday.toISOString().split('T')[0]; // YYYY-MM-DD
+
+    // Get ALL error logs from yesterday (regardless of status_reminder)
+    const yesterdayLogs = await getErrorLogsByDate(yesterdayStr);
 
     // If no logs, don't send anything
-    if (unremindedLogs.length === 0) {
-      console.log('No unchecked error logs found');
+    if (yesterdayLogs.length === 0) {
+      console.log(`No error logs found for ${yesterdayStr}`);
       return;
     }
 
     // Generate TXT file content
     const fs = require('fs');
     const path = require('path');
-    const today = new Date().toISOString().split('T')[0];
 
-    let txtContent = `Unchecked Error Logs Report\n`;
+    let txtContent = `Daily Error Logs Report\n`;
+    txtContent += `Date: ${yesterdayStr}\n`;
     txtContent += `Generated: ${new Date().toISOString()}\n`;
-    txtContent += `Total: ${unremindedLogs.length} unchecked log(s)\n`;
+    txtContent += `Total: ${yesterdayLogs.length} log(s)\n`;
     txtContent += `${'='.repeat(80)}\n\n`;
 
-    for (const log of unremindedLogs) {
+    for (const log of yesterdayLogs) {
       const date = new Date(log.created_date).toLocaleString('id-ID', {
         timeZone: 'Asia/Jakarta'
       });
@@ -819,7 +825,7 @@ cron.schedule('30 7 * * *', async () => {
       fs.mkdirSync(tempDir, { recursive: true });
     }
 
-    const fileName = `unchecked_errorlogs_${today}.txt`;
+    const fileName = `daily_errorlogs_${yesterdayStr}.txt`;
     const filePath = path.join(tempDir, fileName);
     fs.writeFileSync(filePath, txtContent, 'utf8');
 
@@ -827,11 +833,11 @@ cron.schedule('30 7 * * *', async () => {
     const chatId = process.env.CHAT_ID;
     if (chatId) {
       await bot.sendDocument(chatId, filePath, {
-        caption: `📋 *Daily Error Log Report*\n\nHere are all error logs that haven't been checked (${unremindedLogs.length} total)\n\nUse /errorlog to mark them as checked.`,
+        caption: `📋 *Daily Error Log Report*\n\nAll error logs from ${yesterdayStr} (${yesterdayLogs.length} total)`,
         parse_mode: 'Markdown'
       });
 
-      console.log(`Sent daily error log report: ${unremindedLogs.length} unchecked logs`);
+      console.log(`Sent daily error log report: ${yesterdayLogs.length} logs from ${yesterdayStr}`);
     }
 
     // Delete temp file
