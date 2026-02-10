@@ -270,14 +270,19 @@ app.get('/', async (req, res) => {
     return; // Skip auto-reminder if disabled
   }
 
-  // Check time - don't send reminders after 7 PM (Asia/Jakarta timezone)
-  // Morning report at 7:30 AM will handle unchecked errors from previous night
+  // Active window: 8:00 AM to 7:30 PM (Asia/Jakarta)
+  // Before 8 AM: skip (7:30 AM cron handles previous day)
+  // After 7:30 PM: skip (next morning report will cover it)
   const now = new Date();
   const jakartaTime = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Jakarta' }));
   const currentHour = jakartaTime.getHours();
+  const currentMinute = jakartaTime.getMinutes();
 
-  if (currentHour >= 19) { // After 7 PM (19:00)
-    console.log('Skipping auto-reminder after 7 PM - will be included in morning report');
+  const isAfter8AM = currentHour >= 8;
+  const isBefore730PM = currentHour < 19 || (currentHour === 19 && currentMinute < 30);
+
+  if (!isAfter8AM || !isBefore730PM) {
+    console.log(`Skipping auto-reminder outside active window (current Jakarta time: ${currentHour}:${String(currentMinute).padStart(2, '0')})`);
     return;
   }
 
@@ -319,12 +324,12 @@ app.get('/', async (req, res) => {
     if (actualErrors.length > 0) {
       console.log(`Found ${actualErrors.length} actual error logs (filtered from ${unremindedLogs.length} total), sending to Telegram...`);
 
-      // Show only first 5 from actual errors
-      const displayLogs = actualErrors.slice(0, 5);
-      const remainingLogs = actualErrors.slice(5);
+      // Show only first 10 from actual errors
+      const displayLogs = actualErrors.slice(0, 10);
+      const remainingLogs = actualErrors.slice(10);
 
       // Prepare message - same format as /errorlog command
-      let message = `🚨 <b>New Error Logs</b> (${actualErrors.length} total, showing 5)\n\n`;
+      let message = `🚨 <b>New Error Logs</b> (${actualErrors.length} total, showing 10)\n\n`;
 
       for (const log of displayLogs) {
         // Format date as YYYY-MM-DD HH:MM
