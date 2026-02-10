@@ -260,7 +260,7 @@ const getErrorLogsByDate = async (date) => {
   try {
     const result = await pool.query(
       `SELECT * FROM error_msg_log
-       WHERE DATE(created_date) = $1
+       WHERE DATE(created_date AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Jakarta') = $1
        ORDER BY created_date DESC`,
       [date]
     );

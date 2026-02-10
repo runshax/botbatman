@@ -332,8 +332,8 @@ app.get('/', async (req, res) => {
       let message = `🚨 <b>New Error Logs</b> (${actualErrors.length} total, showing 10)\n\n`;
 
       for (const log of displayLogs) {
-        // Format date as YYYY-MM-DD HH:MM
-        const dateObj = new Date(log.created_date);
+        // Format date as YYYY-MM-DD HH:MM (Jakarta time)
+        const dateObj = new Date(new Date(log.created_date).toLocaleString('en-US', { timeZone: 'Asia/Jakarta' }));
         const year = dateObj.getFullYear();
         const month = String(dateObj.getMonth() + 1).padStart(2, '0');
         const day = String(dateObj.getDate()).padStart(2, '0');
@@ -784,11 +784,12 @@ cron.schedule('30 7 * * *', async () => {
   try {
     console.log('Running daily error log report at 7:30 AM...');
 
-    // Get yesterday's date (today - 1 day)
-    const today = new Date();
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
-    const yesterdayStr = yesterday.toISOString().split('T')[0]; // YYYY-MM-DD
+    // Get yesterday's date in Jakarta timezone
+    const now = new Date();
+    const jakartaNow = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Jakarta' }));
+    const jakartaYesterday = new Date(jakartaNow);
+    jakartaYesterday.setDate(jakartaYesterday.getDate() - 1);
+    const yesterdayStr = `${jakartaYesterday.getFullYear()}-${String(jakartaYesterday.getMonth() + 1).padStart(2, '0')}-${String(jakartaYesterday.getDate()).padStart(2, '0')}`; // YYYY-MM-DD
 
     // Get ALL error logs from yesterday (regardless of status_reminder)
     const yesterdayLogs = await getErrorLogsByDate(yesterdayStr);
@@ -2255,8 +2256,8 @@ bot.onText(/^\/errorlog(?:\s+(.+))?$/, async (msg, match) => {
       let message = `📋 <b>Error Logs</b> (${logs.length} total, showing latest 10)\n\n`;
 
       for (const log of displayLogs) {
-        // Format date as YYYY-MM-DD HH:MM
-        const dateObj = new Date(log.created_date);
+        // Format date as YYYY-MM-DD HH:MM (Jakarta time)
+        const dateObj = new Date(new Date(log.created_date).toLocaleString('en-US', { timeZone: 'Asia/Jakarta' }));
         const year = dateObj.getFullYear();
         const month = String(dateObj.getMonth() + 1).padStart(2, '0');
         const day = String(dateObj.getDate()).padStart(2, '0');
@@ -2336,8 +2337,8 @@ bot.onText(/^\/errorlog(?:\s+(.+))?$/, async (msg, match) => {
         .catch(err => console.error("Error:", err));
     }
 
-    // Format date as YYYY-MM-DD HH:MM:SS
-    const dateObj = new Date(log.created_date);
+    // Format date as YYYY-MM-DD HH:MM:SS (Jakarta time)
+    const dateObj = new Date(new Date(log.created_date).toLocaleString('en-US', { timeZone: 'Asia/Jakarta' }));
     const year = dateObj.getFullYear();
     const month = String(dateObj.getMonth() + 1).padStart(2, '0');
     const day = String(dateObj.getDate()).padStart(2, '0');
