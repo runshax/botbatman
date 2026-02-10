@@ -332,14 +332,7 @@ app.get('/', async (req, res) => {
       let message = `🚨 <b>New Error Logs</b> (${actualErrors.length} total, showing 10)\n\n`;
 
       for (const log of displayLogs) {
-        // Format date as YYYY-MM-DD HH:MM (Jakarta time)
-        const dateObj = new Date(new Date(log.created_date).toLocaleString('en-US', { timeZone: 'Asia/Jakarta' }));
-        const year = dateObj.getFullYear();
-        const month = String(dateObj.getMonth() + 1).padStart(2, '0');
-        const day = String(dateObj.getDate()).padStart(2, '0');
-        const hours = String(dateObj.getHours()).padStart(2, '0');
-        const minutes = String(dateObj.getMinutes()).padStart(2, '0');
-        const date = `${year}-${month}-${day} ${hours}:${minutes}`;
+        const date = toJakartaDate(log.created_date);
 
         // Try to prettify JSON data and format nicely (same as /errorlog command)
         let dataPreview = log.data;
@@ -599,6 +592,21 @@ app.listen(PORT, () => {
   console.log(`API endpoint: POST http://localhost:${PORT}/api/saveerrorlog`);
 });
 
+// Helper: format a DB date to Jakarta time (UTC+7) as YYYY-MM-DD HH:MM or YYYY-MM-DD HH:MM:SS
+const toJakartaDate = (dbDate, withSeconds = false) => {
+  const utc = new Date(dbDate);
+  const jakarta = new Date(utc.getTime() + 7 * 60 * 60 * 1000);
+  const year = jakarta.getUTCFullYear();
+  const month = String(jakarta.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(jakarta.getUTCDate()).padStart(2, '0');
+  const hours = String(jakarta.getUTCHours()).padStart(2, '0');
+  const minutes = String(jakarta.getUTCMinutes()).padStart(2, '0');
+  const seconds = String(jakarta.getUTCSeconds()).padStart(2, '0');
+  return withSeconds
+    ? `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`
+    : `${year}-${month}-${day} ${hours}:${minutes}`;
+};
+
 // 2. BOT SETUP
 const token = process.env.BOT_TOKEN;
 const chatId = process.env.CHAT_ID;
@@ -784,12 +792,11 @@ cron.schedule('30 7 * * *', async () => {
   try {
     console.log('Running daily error log report at 7:30 AM...');
 
-    // Get yesterday's date in Jakarta timezone
+    // Get yesterday's date in Jakarta timezone (UTC+7)
     const now = new Date();
-    const jakartaNow = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Jakarta' }));
-    const jakartaYesterday = new Date(jakartaNow);
-    jakartaYesterday.setDate(jakartaYesterday.getDate() - 1);
-    const yesterdayStr = `${jakartaYesterday.getFullYear()}-${String(jakartaYesterday.getMonth() + 1).padStart(2, '0')}-${String(jakartaYesterday.getDate()).padStart(2, '0')}`; // YYYY-MM-DD
+    const jakartaNow = new Date(now.getTime() + 7 * 60 * 60 * 1000);
+    const jakartaYesterday = new Date(jakartaNow.getTime() - 24 * 60 * 60 * 1000);
+    const yesterdayStr = `${jakartaYesterday.getUTCFullYear()}-${String(jakartaYesterday.getUTCMonth() + 1).padStart(2, '0')}-${String(jakartaYesterday.getUTCDate()).padStart(2, '0')}`; // YYYY-MM-DD
 
     // Get ALL error logs from yesterday (regardless of status_reminder)
     const yesterdayLogs = await getErrorLogsByDate(yesterdayStr);
@@ -2256,14 +2263,7 @@ bot.onText(/^\/errorlog(?:\s+(.+))?$/, async (msg, match) => {
       let message = `📋 <b>Error Logs</b> (${logs.length} total, showing latest 10)\n\n`;
 
       for (const log of displayLogs) {
-        // Format date as YYYY-MM-DD HH:MM (Jakarta time)
-        const dateObj = new Date(new Date(log.created_date).toLocaleString('en-US', { timeZone: 'Asia/Jakarta' }));
-        const year = dateObj.getFullYear();
-        const month = String(dateObj.getMonth() + 1).padStart(2, '0');
-        const day = String(dateObj.getDate()).padStart(2, '0');
-        const hours = String(dateObj.getHours()).padStart(2, '0');
-        const minutes = String(dateObj.getMinutes()).padStart(2, '0');
-        const date = `${year}-${month}-${day} ${hours}:${minutes}`;
+        const date = toJakartaDate(log.created_date);
 
         // Try to prettify JSON data and format nicely
         let dataPreview = log.data;
@@ -2337,15 +2337,7 @@ bot.onText(/^\/errorlog(?:\s+(.+))?$/, async (msg, match) => {
         .catch(err => console.error("Error:", err));
     }
 
-    // Format date as YYYY-MM-DD HH:MM:SS (Jakarta time)
-    const dateObj = new Date(new Date(log.created_date).toLocaleString('en-US', { timeZone: 'Asia/Jakarta' }));
-    const year = dateObj.getFullYear();
-    const month = String(dateObj.getMonth() + 1).padStart(2, '0');
-    const day = String(dateObj.getDate()).padStart(2, '0');
-    const hours = String(dateObj.getHours()).padStart(2, '0');
-    const minutes = String(dateObj.getMinutes()).padStart(2, '0');
-    const seconds = String(dateObj.getSeconds()).padStart(2, '0');
-    const date = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+    const date = toJakartaDate(log.created_date, true);
 
     // Try to prettify JSON data
     let displayData = log.data;
