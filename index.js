@@ -338,6 +338,8 @@ app.get('/', async (req, res) => {
         let dataPreview = log.data;
         try {
           const parsed = JSON.parse(log.data);
+          // Strip large fields not useful for quick triage
+          delete parsed.query;
           // Format with indentation, then split into lines
           const formatted = JSON.stringify(parsed, null, 2);
           const lines = formatted.split('\n');
@@ -352,9 +354,9 @@ app.get('/', async (req, res) => {
           // Not JSON, use as-is
         }
 
-        // Truncate data for display if longer than 800 characters
-        if (dataPreview.length > 800) {
-          dataPreview = dataPreview.substring(0, 800) + '...';
+        // Truncate short — 10 items in one message must stay under 4096 chars total
+        if (dataPreview.length > 200) {
+          dataPreview = dataPreview.substring(0, 200) + '...';
         }
 
         // Escape HTML special characters
@@ -818,9 +820,7 @@ cron.schedule('30 7 * * *', async () => {
     txtContent += `${'='.repeat(80)}\n\n`;
 
     for (const log of yesterdayLogs) {
-      const date = new Date(log.created_date).toLocaleString('id-ID', {
-        timeZone: 'Asia/Jakarta'
-      });
+      const date = toJakartaDate(log.created_date, true);
 
       txtContent += `ID: ${log.id}\n`;
       txtContent += `Date: ${date}\n`;
@@ -2210,9 +2210,7 @@ bot.onText(/^\/errorlog(?:\s+(.+))?$/, async (msg, match) => {
       txtContent += `${'='.repeat(80)}\n\n`;
 
       for (const log of logs) {
-        const date = new Date(log.created_date).toLocaleString('id-ID', {
-          timeZone: 'Asia/Jakarta'
-        });
+        const date = toJakartaDate(log.created_date, true);
 
         txtContent += `ID: ${log.id}\n`;
         txtContent += `Date: ${date}\n`;
