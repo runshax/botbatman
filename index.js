@@ -813,7 +813,7 @@ cron.schedule('30 7 * * *', async () => {
 
     let txtContent = `Daily Error Logs Report\n`;
     txtContent += `Date: ${yesterdayStr}\n`;
-    txtContent += `Generated: ${new Date().toISOString()}\n`;
+    txtContent += `Generated: ${toJakartaDate(new Date(), true)}\n`;
     txtContent += `Total: ${yesterdayLogs.length} log(s)\n`;
     txtContent += `${'='.repeat(80)}\n\n`;
 
@@ -2206,7 +2206,7 @@ bot.onText(/^\/errorlog(?:\s+(.+))?$/, async (msg, match) => {
       const path = require('path');
       let txtContent = `Error Logs for ${targetDate}\n`;
       txtContent += `Total: ${logs.length} log(s)\n`;
-      txtContent += `Generated: ${new Date().toISOString()}\n`;
+      txtContent += `Generated: ${toJakartaDate(new Date(), true)}\n`;
       txtContent += `${'='.repeat(80)}\n\n`;
 
       for (const log of logs) {
