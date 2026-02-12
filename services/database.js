@@ -271,6 +271,21 @@ const getErrorLogsByDate = async (date) => {
   }
 };
 
+// Delete error logs older than N days (based on Jakarta date)
+const deleteOldErrorLogs = async (days = 5) => {
+  try {
+    const result = await pool.query(
+      `DELETE FROM error_msg_log
+       WHERE DATE(created_date AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Jakarta') <= (CURRENT_DATE AT TIME ZONE 'Asia/Jakarta' - INTERVAL '${days} days')
+       RETURNING id`
+    );
+    return { success: true, deleted: result.rowCount };
+  } catch (err) {
+    console.error('Error deleting old error logs:', err);
+    return { success: false, deleted: 0 };
+  }
+};
+
 module.exports = {
   initDatabase,
   addCredential,
@@ -287,5 +302,6 @@ module.exports = {
   getUnremindedErrorLogs,
   markErrorLogAsReminded,
   markErrorLogsAsReminded,
-  getErrorLogsByDate
+  getErrorLogsByDate,
+  deleteOldErrorLogs
 };
