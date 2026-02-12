@@ -2267,6 +2267,8 @@ bot.onText(/^\/errorlog(?:\s+(.+))?$/, async (msg, match) => {
         let dataPreview = log.data;
         try {
           const parsed = JSON.parse(log.data);
+          // Strip large fields not useful for quick triage
+          delete parsed.query;
           // Format with indentation, then split into lines
           const formatted = JSON.stringify(parsed, null, 2);
           const lines = formatted.split('\n');
@@ -2281,9 +2283,9 @@ bot.onText(/^\/errorlog(?:\s+(.+))?$/, async (msg, match) => {
           // Not JSON, use as-is
         }
 
-        // Truncate data for display if longer than 800 characters
-        if (dataPreview.length > 800) {
-          dataPreview = dataPreview.substring(0, 800) + '...';
+        // Truncate short — 10 items in one message must stay under 4096 chars total
+        if (dataPreview.length > 200) {
+          dataPreview = dataPreview.substring(0, 200) + '...';
         }
 
         // Escape HTML special characters only
