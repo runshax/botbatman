@@ -334,43 +334,31 @@ app.get('/', async (req, res) => {
       for (const log of displayLogs) {
         const date = toJakartaDate(log.created_date);
 
-        // Try to prettify JSON data and format nicely (same as /errorlog command)
-        let dataPreview = log.data;
+        let companyCode = '';
+        let msgText = '';
+        let queryPreview = '';
         try {
           const parsed = JSON.parse(log.data);
-          // Strip large fields not useful for quick triage
-          delete parsed.query;
-          // Format with indentation, then split into lines
-          const formatted = JSON.stringify(parsed, null, 2);
-          const lines = formatted.split('\n');
-
-          // Remove opening and closing braces, keep only content
-          if (lines[0] === '{' && lines[lines.length - 1] === '}') {
-            dataPreview = lines.slice(1, -1).join('\n').trim();
-          } else {
-            dataPreview = formatted;
+          companyCode = parsed.companyCode || '';
+          msgText = parsed.message || '';
+          if (parsed.query) {
+            queryPreview = parsed.query.length > 150
+              ? parsed.query.substring(0, 150) + '...'
+              : parsed.query;
           }
         } catch (e) {
-          // Not JSON, use as-is
-        }
-
-        // Truncate short — 10 items in one message must stay under 4096 chars total
-        if (dataPreview.length > 200) {
-          dataPreview = dataPreview.substring(0, 200) + '...';
+          msgText = log.data;
         }
 
         // Escape HTML special characters
-        dataPreview = dataPreview
-          .replace(/&/g, '&amp;')
-          .replace(/</g, '&lt;')
-          .replace(/>/g, '&gt;');
+        const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
         message += `🔸 <b>ID:</b> <code>${log.id.substring(0, 8)}</code>\n`;
         message += `   📅 ${date}\n`;
-        if (log.type_data) {
-          message += `   🏷️ Type: ${log.type_data}\n`;
-        }
-        message += `   📝 ${dataPreview}\n\n`;
+        if (companyCode) message += `   🏢 ${esc(companyCode)}\n`;
+        message += `   💬 ${esc(msgText)}\n`;
+        if (queryPreview) message += `   🗄 <code>${esc(queryPreview)}</code>\n`;
+        message += '\n';
       }
 
       // If there are more than 5, show remaining IDs (limit to 10)
