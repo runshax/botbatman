@@ -867,6 +867,13 @@ bot.on('polling_error', (error) => {
   console.error('Polling error:', error.code, error.message);
 });
 
+// ==================== DEBUG: LOG THREAD ID ====================
+bot.on('message', (msg) => {
+  if (msg.message_thread_id) {
+    console.log(`[DEBUG] chat_id: ${msg.chat.id} | thread_id: ${msg.message_thread_id} | from: ${msg.from?.username} | text: ${msg.text}`);
+  }
+});
+
 // ==================== HELP COMMAND ====================
 bot.onText(/^\/help$/, (msg) => {
   trackCommand(msg.chat.id, msg.message_id);
