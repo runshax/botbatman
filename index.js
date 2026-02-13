@@ -871,19 +871,21 @@ bot.on('polling_error', (error) => {
 // Only allow user commands in the PayrollBot topic (thread 6119)
 const BOT_TOPIC_ID = 6119;
 
-// Temp: log chat_id and thread_id for all group messages
-bot.on('message', (msg) => {
-  if (msg.chat.type !== 'private') {
-    console.log(`[TOPIC] chat_id: ${msg.chat.id} | thread_id: ${msg.message_thread_id || 'none'} | text: ${msg.text}`);
+// Helper: reply in the same topic/thread the command was sent from
+const reply = (msg, text, opts = {}) => {
+  const options = { ...opts };
+  if (msg.message_thread_id) {
+    options.message_thread_id = msg.message_thread_id;
   }
-});
+  return bot.sendMessage(msg.chat.id, text, options);
+};
 
 
 // ==================== HELP COMMAND ====================
 bot.onText(/^\/help$/, (msg) => {
   trackCommand(msg.chat.id, msg.message_id);
   if (msg.chat.type !== 'private' && msg.message_thread_id !== BOT_TOPIC_ID) {
-    return bot.sendMessage(msg.chat.id, '⚠️ Please use the <b>PayrollBot</b> topic to interact with this bot.', { parse_mode: 'HTML', ...(msg.message_thread_id && { message_thread_id: msg.message_thread_id }) });
+    return reply(msg, '⚠️ Please use the <b>PayrollBot</b> topic to interact with this bot.', { parse_mode: 'HTML', ...(msg.message_thread_id && { message_thread_id: msg.message_thread_id }) });
   }
   const helpMessage = `🤖 *Bot Command List*\n\n` +
     `*Available Commands:*\n\n` +
@@ -978,20 +980,20 @@ bot.onText(/^\/help$/, (msg) => {
 
     `💡 _Tip: Type any command without parameters to see usage examples!_`;
 
-  bot.sendMessage(msg.chat.id, helpMessage, { parse_mode: 'Markdown' })
+  reply(msg, helpMessage, { parse_mode: 'Markdown' })
     .then(msg => trackMessage(msg.chat.id, msg.message_id))
     .catch(err => console.error("Error sending help message:", err));
 });
 
 bot.onText(/^\/dev(?:\s+(.+))?$/, async (msg, match) => {
   if (msg.chat.type !== 'private' && msg.message_thread_id !== BOT_TOPIC_ID) {
-    return bot.sendMessage(msg.chat.id, '⚠️ Please use the <b>PayrollBot</b> topic to interact with this bot.', { parse_mode: 'HTML', ...(msg.message_thread_id && { message_thread_id: msg.message_thread_id }) });
+    return reply(msg, '⚠️ Please use the <b>PayrollBot</b> topic to interact with this bot.', { parse_mode: 'HTML', ...(msg.message_thread_id && { message_thread_id: msg.message_thread_id }) });
   }
   // Only track if it's not a forwarded message with URL (containing ://)
   if (!msg.text.includes('://')) {
     trackCommand(msg.chat.id, msg.message_id);
   if (msg.chat.type !== 'private' && msg.message_thread_id !== BOT_TOPIC_ID) {
-    return bot.sendMessage(msg.chat.id, '⚠️ Please use the <b>PayrollBot</b> topic to interact with this bot.', { parse_mode: 'HTML', ...(msg.message_thread_id && { message_thread_id: msg.message_thread_id }) });
+    return reply(msg, '⚠️ Please use the <b>PayrollBot</b> topic to interact with this bot.', { parse_mode: 'HTML', ...(msg.message_thread_id && { message_thread_id: msg.message_thread_id }) });
   }
   }
   const userId = msg.from.id.toString();
@@ -1006,7 +1008,7 @@ bot.onText(/^\/dev(?:\s+(.+))?$/, async (msg, match) => {
     const parts = credInput.split(/\s*\/\s*/);
 
     if (parts.length !== 4) {
-      return bot.sendMessage(msg.chat.id,
+      return reply(msg,
         `❌ *Format salah!*\n\n*Usage:*\n\`/dev add country / username / password / sfgo\`\n\n*Example:*\n\`/dev add MY / champion / pass1234 / sfgo8879\`\n\n*Or without spaces:*\n\`/dev add MY/champion/pass1234/sfgo8879\`\n\n_Found ${parts.length} parts, need 4_`,
         { parse_mode: 'Markdown' }
       )
@@ -1031,14 +1033,14 @@ bot.onText(/^\/dev(?:\s+(.+))?$/, async (msg, match) => {
     if (result.success) {
       const action = isUpdate ? 'updated' : 'saved';
       const emoji = isUpdate ? '🔄' : '✅';
-      return bot.sendMessage(msg.chat.id,
+      return reply(msg,
         `${emoji} *Credential ${action}!*\n\nCountry: ${country}\nSFGO: ${sfgo}\nUsername: ${username}\nURL: ${url}\n\nUse \`/dev ${sfgo}\` to view`,
         { parse_mode: 'Markdown' }
       )
         .then(m => trackMessage(m.chat.id, m.message_id))
         .catch(err => console.error("Error:", err));
     } else {
-      return bot.sendMessage(msg.chat.id,
+      return reply(msg,
         `❌ *Error saving credential:* ${result.error}`,
         { parse_mode: 'Markdown' }
       )
@@ -1054,21 +1056,21 @@ bot.onText(/^\/dev(?:\s+(.+))?$/, async (msg, match) => {
     const result = await deleteCredential(sfgo);
 
     if (result.success && result.deleted) {
-      return bot.sendMessage(msg.chat.id,
+      return reply(msg,
         `✅ *Credential deleted!*\n\nSFGO: ${sfgo}`,
         { parse_mode: 'Markdown' }
       )
         .then(m => trackMessage(m.chat.id, m.message_id))
         .catch(err => console.error("Error:", err));
     } else if (result.success && !result.deleted) {
-      return bot.sendMessage(msg.chat.id,
+      return reply(msg,
         `❌ *Credential not found!*\n\nSFGO: ${sfgo}`,
         { parse_mode: 'Markdown' }
       )
         .then(m => trackMessage(m.chat.id, m.message_id))
         .catch(err => console.error("Error:", err));
     } else {
-      return bot.sendMessage(msg.chat.id,
+      return reply(msg,
         `❌ *Error deleting credential:* ${result.error}`,
         { parse_mode: 'Markdown' }
       )
@@ -1147,7 +1149,7 @@ bot.onText(/^\/dev(?:\s+(.+))?$/, async (msg, match) => {
   }
 
   const options = useMarkdown ? { parse_mode: 'Markdown' } : {};
-  bot.sendMessage(msg.chat.id, response, options)
+  reply(msg, response, options)
     .then(msg => trackMessage(msg.chat.id, msg.message_id))
     .catch(err => console.error("Error sending dev credentials:", err));
 });
@@ -1156,13 +1158,13 @@ bot.onText(/^\/dev(?:\s+(.+))?$/, async (msg, match) => {
 bot.onText(/^\/reset(?:\s+(.+))?$/, async (msg, match) => {
   trackCommand(msg.chat.id, msg.message_id);
   if (msg.chat.type !== 'private' && msg.message_thread_id !== BOT_TOPIC_ID) {
-    return bot.sendMessage(msg.chat.id, '⚠️ Please use the <b>PayrollBot</b> topic to interact with this bot.', { parse_mode: 'HTML', ...(msg.message_thread_id && { message_thread_id: msg.message_thread_id }) });
+    return reply(msg, '⚠️ Please use the <b>PayrollBot</b> topic to interact with this bot.', { parse_mode: 'HTML', ...(msg.message_thread_id && { message_thread_id: msg.message_thread_id }) });
   }
   try {
     const input = match[1];
 
     if (!input) {
-      return bot.sendMessage(msg.chat.id,
+      return reply(msg,
         "❌ *Format salah!*\n\n*Usage:*\n`/reset username password`\n\n*Example:*\n`/reset email@gmail.com pass1234`",
         { parse_mode: 'Markdown' }
       )
@@ -1173,7 +1175,7 @@ bot.onText(/^\/reset(?:\s+(.+))?$/, async (msg, match) => {
     const parts = input.trim().split(/\s+/);
 
     if (parts.length !== 2) {
-      return bot.sendMessage(msg.chat.id,
+      return reply(msg,
         "❌ *Format salah!*\n\nHarus ada 2 parameter: username dan password\n\n*Example:*\n`/reset email@gmail.com pass1234`",
         { parse_mode: 'Markdown' }
       )
@@ -1184,19 +1186,19 @@ bot.onText(/^\/reset(?:\s+(.+))?$/, async (msg, match) => {
     const [username, password] = parts;
     const uuid = process.env.DEFAULT_UUID || 'reset';
 
-    bot.sendMessage(msg.chat.id, "⏳ *Processing...*\nGenerating encrypted password hash...", { parse_mode: 'Markdown' })
+    reply(msg, "⏳ *Processing...*\nGenerating encrypted password hash...", { parse_mode: 'Markdown' })
       .then(msg => trackMessage(msg.chat.id, msg.message_id))
       .catch(err => console.error("Error sending processing message:", err));
 
     const result = await encryptPassword(username, password, uuid);
 
-    bot.sendMessage(msg.chat.id, `\`\`\`\n${result.message}\n\`\`\``, { parse_mode: 'Markdown' })
+    reply(msg, `\`\`\`\n${result.message}\n\`\`\``, { parse_mode: 'Markdown' })
       .then(msg => trackMessage(msg.chat.id, msg.message_id))
       .catch(err => console.error("Error sending reset result:", err));
 
   } catch (err) {
     console.error("Error in /reset command:", err);
-    bot.sendMessage(msg.chat.id, "❌ *Error!*\nSomething went wrong while processing your request.", { parse_mode: 'Markdown' })
+    reply(msg, "❌ *Error!*\nSomething went wrong while processing your request.", { parse_mode: 'Markdown' })
       .then(msg => trackMessage(msg.chat.id, msg.message_id))
       .catch(err => console.error("Error sending error message:", err));
   }
@@ -1206,7 +1208,7 @@ bot.onText(/^\/reset(?:\s+(.+))?$/, async (msg, match) => {
 bot.onText(/^\/ask(?:\s+(.+))?$/, async (msg, match) => {
   trackCommand(msg.chat.id, msg.message_id);
   if (msg.chat.type !== 'private' && msg.message_thread_id !== BOT_TOPIC_ID) {
-    return bot.sendMessage(msg.chat.id, '⚠️ Please use the <b>PayrollBot</b> topic to interact with this bot.', { parse_mode: 'HTML', ...(msg.message_thread_id && { message_thread_id: msg.message_thread_id }) });
+    return reply(msg, '⚠️ Please use the <b>PayrollBot</b> topic to interact with this bot.', { parse_mode: 'HTML', ...(msg.message_thread_id && { message_thread_id: msg.message_thread_id }) });
   }
 
   try {
@@ -1214,7 +1216,7 @@ bot.onText(/^\/ask(?:\s+(.+))?$/, async (msg, match) => {
     const keywords = parseKeywordsFromMarkdown();
 
     if (!keywords || keywords.length === 0) {
-      return bot.sendMessage(msg.chat.id,
+      return reply(msg,
         '⚠️ Error: Unable to load keywords documentation.\nPlease try again later.',
         { parse_mode: 'Markdown' }
       ).then(m => trackMessage(m.chat.id, m.message_id));
@@ -1258,7 +1260,7 @@ bot.onText(/^\/ask(?:\s+(.+))?$/, async (msg, match) => {
       response += `/ask DEFFORM\n`;
       response += `/ask ATTINTF`;
 
-      return bot.sendMessage(msg.chat.id, response, { parse_mode: 'HTML' })
+      return reply(msg, response, { parse_mode: 'HTML' })
         .then(m => trackMessage(m.chat.id, m.message_id))
         .catch(err => console.error("Error sending categories:", err));
     }
@@ -1328,13 +1330,13 @@ bot.onText(/^\/ask(?:\s+(.+))?$/, async (msg, match) => {
 
         // Check if response is getting too long (Telegram limit ~4096 chars)
         if (response.length > 3500) {
-          await bot.sendMessage(msg.chat.id, response, { parse_mode: 'HTML' })
+          await reply(msg, response, { parse_mode: 'HTML' })
             .then(m => trackMessage(m.chat.id, m.message_id));
           response = `📚 <b>${matchedCategory}</b> (continued)\n\n`;
         }
       }
 
-      return bot.sendMessage(msg.chat.id, response, { parse_mode: 'HTML' })
+      return reply(msg, response, { parse_mode: 'HTML' })
         .then(m => trackMessage(m.chat.id, m.message_id))
         .catch(err => console.error("Error sending category list:", err));
     }
@@ -1343,7 +1345,7 @@ bot.onText(/^\/ask(?:\s+(.+))?$/, async (msg, match) => {
     const keyword = searchKeyword(query);
 
     if (!keyword) {
-      return bot.sendMessage(msg.chat.id,
+      return reply(msg,
         `❌ "${query}" not found.\n\n` +
         "Try:\n" +
         "• \`/ask\` to see all categories\n" +
@@ -1405,17 +1407,17 @@ bot.onText(/^\/ask(?:\s+(.+))?$/, async (msg, match) => {
       response += `\n*Aliases:* ${escapeMarkdown(keyword.aliases.join(', '))}`;
     }
 
-    bot.sendMessage(msg.chat.id, response, { parse_mode: 'Markdown' })
+    reply(msg, response, { parse_mode: 'Markdown' })
       .then(m => trackMessage(m.chat.id, m.message_id))
       .catch(err => {
         console.error("Error sending keyword info:", err);
-        bot.sendMessage(msg.chat.id, "Error displaying keyword information.")
+        reply(msg, "Error displaying keyword information.")
           .then(m => trackMessage(m.chat.id, m.message_id))
           .catch(e => console.error("Error sending error message:", e));
       });
   } catch (error) {
     console.error("Error in /ask command:", error);
-    bot.sendMessage(msg.chat.id, '⚠️ An error occurred. Please try again.')
+    reply(msg, '⚠️ An error occurred. Please try again.')
       .then(m => trackMessage(m.chat.id, m.message_id))
       .catch(e => console.error("Error sending error message:", e));
   }
@@ -1425,7 +1427,7 @@ bot.onText(/^\/ask(?:\s+(.+))?$/, async (msg, match) => {
 bot.onText(/^\/parse/, async (msg) => {
   trackCommand(msg.chat.id, msg.message_id);
   if (msg.chat.type !== 'private' && msg.message_thread_id !== BOT_TOPIC_ID) {
-    return bot.sendMessage(msg.chat.id, '⚠️ Please use the <b>PayrollBot</b> topic to interact with this bot.', { parse_mode: 'HTML', ...(msg.message_thread_id && { message_thread_id: msg.message_thread_id }) });
+    return reply(msg, '⚠️ Please use the <b>PayrollBot</b> topic to interact with this bot.', { parse_mode: 'HTML', ...(msg.message_thread_id && { message_thread_id: msg.message_thread_id }) });
   }
   try {
     // Extract formula from message text (everything after /parse)
@@ -1434,7 +1436,7 @@ bot.onText(/^\/parse/, async (msg) => {
 
     // Check if formula is provided
     if (!formula) {
-      return bot.sendMessage(msg.chat.id,
+      return reply(msg,
         "❌ *Format salah!*\n\n*Usage:*\n`/parse FORMULA`\n\n*Examples:*\n" +
         "`/parse 1+1`\n" +
         "`/parse SUM(10,20,30)`\n" +
@@ -1495,7 +1497,7 @@ bot.onText(/^\/parse/, async (msg) => {
         return `${v}='Yes'`;
       }).join(' | ');
 
-      return bot.sendMessage(msg.chat.id,
+      return reply(msg,
         `⚠️ *Variables detected!*\n\n` +
         `*Missing values for:* ${missingVars.join(', ')}\n\n` +
         `*Please reply with variable values:*\n` +
@@ -1532,14 +1534,14 @@ bot.onText(/^\/parse/, async (msg) => {
         response += `\n*With Values:*\n\`\`\`\n${formattedWithValues}\n\`\`\``;
       }
 
-      bot.sendMessage(msg.chat.id, response, { parse_mode: 'Markdown' })
+      reply(msg, response, { parse_mode: 'Markdown' })
         .then(m => trackMessage(m.chat.id, m.message_id))
         .catch(err => console.error("Error sending parse result:", err));
     } else {
       // Error - show error message
       const formattedFormula = formatFormula(actualFormula);
 
-      bot.sendMessage(msg.chat.id,
+      reply(msg,
         `❌ *Formula Error*\n\n` +
         `*Formatted Formula:*\n\`\`\`\n${formattedFormula}\n\`\`\`\n` +
         `*Error:* ${result.error}`,
@@ -1551,7 +1553,7 @@ bot.onText(/^\/parse/, async (msg) => {
 
   } catch (err) {
     console.error("Error in /parse command:", err);
-    bot.sendMessage(msg.chat.id, "❌ *Error!*\nSomething went wrong while processing your formula.", { parse_mode: 'Markdown' })
+    reply(msg, "❌ *Error!*\nSomething went wrong while processing your formula.", { parse_mode: 'Markdown' })
       .then(msg => trackMessage(msg.chat.id, msg.message_id))
       .catch(err => console.error("Error sending error message:", err));
   }
@@ -1562,7 +1564,7 @@ bot.onText(/^\/parse/, async (msg) => {
 bot.onText(/^\/sfgo(\d+)(?:\s+(qa))?$/i, async (msg, match) => {
   trackCommand(msg.chat.id, msg.message_id);
   if (msg.chat.type !== 'private' && msg.message_thread_id !== BOT_TOPIC_ID) {
-    return bot.sendMessage(msg.chat.id, '⚠️ Please use the <b>PayrollBot</b> topic to interact with this bot.', { parse_mode: 'HTML', ...(msg.message_thread_id && { message_thread_id: msg.message_thread_id }) });
+    return reply(msg, '⚠️ Please use the <b>PayrollBot</b> topic to interact with this bot.', { parse_mode: 'HTML', ...(msg.message_thread_id && { message_thread_id: msg.message_thread_id }) });
   }
   try {
     const number = match[1];
@@ -1577,7 +1579,7 @@ bot.onText(/^\/sfgo(\d+)(?:\s+(qa))?$/i, async (msg, match) => {
       result = `sfgo${number}-dev-gd|http://localhost:3001`;
     }
 
-    bot.sendMessage(msg.chat.id, result)
+    reply(msg, result)
       .then(msg => trackMessage(msg.chat.id, msg.message_id))
       .catch(err => console.error("Error sending sfgo result:", err));
 
@@ -1608,7 +1610,7 @@ bot.on('message', async (msg) => {
     // Check if user wants to cancel
     if (userInput.toLowerCase() === 'cancel' || userInput.toLowerCase() === 'nevermind') {
       pendingFormulas.delete(msg.chat.id);
-      return bot.sendMessage(msg.chat.id, '✅ Formula calculation cancelled.')
+      return reply(msg, '✅ Formula calculation cancelled.')
         .then(m => trackMessage(m.chat.id, m.message_id))
         .catch(err => console.error("Error:", err));
     }
@@ -1646,7 +1648,7 @@ bot.on('message', async (msg) => {
     const missingVars = pending.variables.filter(v => !(v.toUpperCase() in variableValues));
 
     if (missingVars.length > 0) {
-      return bot.sendMessage(msg.chat.id,
+      return reply(msg,
         `❌ *Still missing values for:* ${missingVars.join(', ')}\n\n` +
         `Please provide all variables in format:\n` +
         `\`${pending.variables.map(v => `${v}=value`).join(' | ')}\``,
@@ -1675,11 +1677,11 @@ bot.on('message', async (msg) => {
       }
       response += `\n*With Values:*\n\`\`\`\n${formattedWithValues}\n\`\`\``;
 
-      bot.sendMessage(msg.chat.id, response, { parse_mode: 'Markdown' })
+      reply(msg, response, { parse_mode: 'Markdown' })
         .then(m => trackMessage(m.chat.id, m.message_id))
         .catch(err => console.error("Error:", err));
     } else {
-      bot.sendMessage(msg.chat.id,
+      reply(msg,
         `❌ *Formula Error*\n\n*Error:* ${result.error}`,
         { parse_mode: 'Markdown' }
       )
@@ -1703,7 +1705,7 @@ const telegramToWorkUsername = {
 bot.onText(/^\/ticket(?:\s+(.+))?$/, async (msg, match) => {
   trackCommand(msg.chat.id, msg.message_id);
   if (msg.chat.type !== 'private' && msg.message_thread_id !== BOT_TOPIC_ID) {
-    return bot.sendMessage(msg.chat.id, '⚠️ Please use the <b>PayrollBot</b> topic to interact with this bot.', { parse_mode: 'HTML', ...(msg.message_thread_id && { message_thread_id: msg.message_thread_id }) });
+    return reply(msg, '⚠️ Please use the <b>PayrollBot</b> topic to interact with this bot.', { parse_mode: 'HTML', ...(msg.message_thread_id && { message_thread_id: msg.message_thread_id }) });
   }
   const userId = msg.from.id.toString();
   const input = match[1];
@@ -1711,7 +1713,7 @@ bot.onText(/^\/ticket(?:\s+(.+))?$/, async (msg, match) => {
   try {
     // SUBCOMMAND: login - Show web login instructions
     if (input === 'login') {
-      return bot.sendMessage(msg.chat.id,
+      return reply(msg,
         `🔐 <b>Web Login Instructions</b>\n\n` +
         `To click ticket links and have them open automatically in Chrome:\n\n` +
         `<b>Step 1: Set Chrome as Default Browser (Windows)</b>\n` +
@@ -1737,7 +1739,7 @@ bot.onText(/^\/ticket(?:\s+(.+))?$/, async (msg, match) => {
     // SUBCOMMAND: logout - Clear Bearer token
     if (input === 'logout') {
       if (!userTokens.has(userId)) {
-        return bot.sendMessage(msg.chat.id,
+        return reply(msg,
           `❌ You don't have a stored Bearer token`,
           { parse_mode: 'Markdown' }
         )
@@ -1753,7 +1755,7 @@ bot.onText(/^\/ticket(?:\s+(.+))?$/, async (msg, match) => {
 
       userTokens.delete(userId);
 
-      return bot.sendMessage(msg.chat.id,
+      return reply(msg,
         `✅ *Logged out successfully*\n\nBearer token cleared from memory`,
         { parse_mode: 'Markdown' }
       )
@@ -1765,7 +1767,7 @@ bot.onText(/^\/ticket(?:\s+(.+))?$/, async (msg, match) => {
     if (input && input.startsWith('res ')) {
       // Check if this is a private chat
       if (msg.chat.type !== 'private') {
-        return bot.sendMessage(msg.chat.id,
+        return reply(msg,
           `⚠️ *Security Warning*\n\n` +
           `Please use this command in a private chat with the bot to protect your Bearer token.\n\n` +
           `Bearer tokens will auto-clear after 5 minutes.`,
@@ -1781,7 +1783,7 @@ bot.onText(/^\/ticket(?:\s+(.+))?$/, async (msg, match) => {
 
       if (!telegramUsername) {
         console.log(`[/ticket res] ERROR: User has no Telegram username set`);
-        return bot.sendMessage(msg.chat.id,
+        return reply(msg,
           `❌ *Username Required*\n\n` +
           `You need to set a Telegram username in your profile to use this command.\n\n` +
           `Go to Telegram Settings → Edit Profile → Username`,
@@ -1793,7 +1795,7 @@ bot.onText(/^\/ticket(?:\s+(.+))?$/, async (msg, match) => {
 
       if (!telegramToWorkUsername[telegramUsername]) {
         console.log(`[/ticket res] ERROR: Username "${telegramUsername}" not in allowed list`);
-        return bot.sendMessage(msg.chat.id,
+        return reply(msg,
           `❌ *Access Denied*\n\n` +
           `You don't have permission to respond to tickets.\n\n` +
           `Only authorized team members can use this feature.`,
@@ -1808,7 +1810,7 @@ bot.onText(/^\/ticket(?:\s+(.+))?$/, async (msg, match) => {
       const ticketCode = parts[0];
 
       if (!ticketCode || !ticketCode.startsWith('HDTKT-')) {
-        return bot.sendMessage(msg.chat.id,
+        return reply(msg,
           `❌ *Invalid ticket ID*\n\n` +
           `Format: \`/ticket res HDTKT-2601-00020563 Bearer eyJ0eXAi...\`\n\n` +
           `Or use \`/ticket logout\` to clear stored token`,
@@ -1847,7 +1849,7 @@ bot.onText(/^\/ticket(?:\s+(.+))?$/, async (msg, match) => {
         const tokenData = userTokens.get(userId);
 
         if (!tokenData) {
-          return bot.sendMessage(msg.chat.id,
+          return reply(msg,
             `❌ *No Bearer token found*\n\n` +
             `Please provide your Bearer token:\n` +
             `/ticket res ${ticketCode} Bearer eyJ0eXAi...\n\n` +
@@ -1935,7 +1937,7 @@ bot.onText(/^\/ticket(?:\s+(.+))?$/, async (msg, match) => {
       const updateResult = await updateResponse.json();
       console.log(`[/ticket res] ✅ SUCCESS! Ticket ${ticketCode} marked as "Responded"`);
 
-      return bot.sendMessage(msg.chat.id,
+      return reply(msg,
         `✅ *Ticket Responded Successfully*\n\n` +
         `*Ticket:* ${ticketCode}\n` +
         `*Task ID:* ${taskId}\n` +
@@ -1957,7 +1959,7 @@ bot.onText(/^\/ticket(?:\s+(.+))?$/, async (msg, match) => {
       filterUsername = telegramToWorkUsername[telegramUsername];
 
       if (!filterUsername) {
-        return bot.sendMessage(msg.chat.id,
+        return reply(msg,
           `❌ <b>Username Not Mapped</b>\n\n` +
           `Your Telegram username (@${telegramUsername}) is not mapped to a work username.\n\n` +
           `Please contact admin to add your mapping.`,
@@ -1999,7 +2001,7 @@ bot.onText(/^\/ticket(?:\s+(.+))?$/, async (msg, match) => {
 
     // Check if data exists
     if (!data || !data.allocation || data.allocation.length === 0) {
-      return bot.sendMessage(msg.chat.id,
+      return reply(msg,
         `📋 <b>No Tickets Found</b>\n\n` +
         `No tickets scheduled for today (${todayStr})\n\n` +
         `<i>API returned empty data or no allocations</i>`,
@@ -2104,7 +2106,7 @@ bot.onText(/^\/ticket(?:\s+(.+))?$/, async (msg, match) => {
       responseText += `<b>Total: ${totalTickets} ticket(s) | ${userCount} user(s)</b>`;
     }
 
-    return bot.sendMessage(msg.chat.id, responseText, { parse_mode: 'HTML' })
+    return reply(msg, responseText, { parse_mode: 'HTML' })
       .then(m => trackMessage(m.chat.id, m.message_id))
       .catch(err => console.error("Error:", err));
 
@@ -2127,7 +2129,7 @@ bot.onText(/^\/ticket(?:\s+(.+))?$/, async (msg, match) => {
       errorMessage += `Please try again or contact support.`;
     }
 
-    return bot.sendMessage(msg.chat.id, errorMessage, { parse_mode: 'HTML' })
+    return reply(msg, errorMessage, { parse_mode: 'HTML' })
       .then(m => trackMessage(m.chat.id, m.message_id))
       .catch(err => console.error("Error:", err));
   }
@@ -2179,7 +2181,7 @@ bot.onText(/^\/clear$/, async (msg) => {
 
   } catch (err) {
     console.error("Error in /clear command:", err);
-    bot.sendMessage(msg.chat.id, "❌ *Error!*\nSomething went wrong while clearing messages.", { parse_mode: 'Markdown' })
+    reply(msg, "❌ *Error!*\nSomething went wrong while clearing messages.", { parse_mode: 'Markdown' })
       .then(msg => trackMessage(msg.chat.id, msg.message_id))
       .catch(err => console.error("Error sending error message:", err));
   }
@@ -2189,7 +2191,7 @@ bot.onText(/^\/clear$/, async (msg) => {
 bot.onText(/^\/errorlog(?:\s+(.+))?$/, async (msg, match) => {
   trackCommand(msg.chat.id, msg.message_id);
   if (msg.chat.type !== 'private' && msg.message_thread_id !== BOT_TOPIC_ID) {
-    return bot.sendMessage(msg.chat.id, '⚠️ Please use the <b>PayrollBot</b> topic to interact with this bot.', { parse_mode: 'HTML', ...(msg.message_thread_id && { message_thread_id: msg.message_thread_id }) });
+    return reply(msg, '⚠️ Please use the <b>PayrollBot</b> topic to interact with this bot.', { parse_mode: 'HTML', ...(msg.message_thread_id && { message_thread_id: msg.message_thread_id }) });
   }
   try {
     const subCommand = match[1] ? match[1].trim() : null;
@@ -2198,14 +2200,14 @@ bot.onText(/^\/errorlog(?:\s+(.+))?$/, async (msg, match) => {
     if (subCommand && subCommand.toLowerCase() === 'clear') {
       const result = await deleteAllErrorLogs();
       if (result.success) {
-        return bot.sendMessage(msg.chat.id,
+        return reply(msg,
           `✅ <b>Deleted ${result.count} error logs</b>`,
           { parse_mode: 'HTML' }
         )
           .then(m => trackMessage(m.chat.id, m.message_id))
           .catch(err => console.error("Error:", err));
       } else {
-        return bot.sendMessage(msg.chat.id,
+        return reply(msg,
           `❌ <b>Error deleting logs:</b> ${result.error}`,
           { parse_mode: 'HTML' }
         )
@@ -2219,7 +2221,7 @@ bot.onText(/^\/errorlog(?:\s+(.+))?$/, async (msg, match) => {
       const dateMatch = subCommand.match(/download\s+(\d{4}-\d{2}-\d{2})/i);
 
       if (!dateMatch) {
-        return bot.sendMessage(msg.chat.id,
+        return reply(msg,
           `❌ <b>Invalid format</b>\n\nUsage: <code>/errorlog download 2026-02-06</code>`,
           { parse_mode: 'HTML' }
         )
@@ -2231,7 +2233,7 @@ bot.onText(/^\/errorlog(?:\s+(.+))?$/, async (msg, match) => {
       const logs = await getErrorLogsByDate(targetDate);
 
       if (logs.length === 0) {
-        return bot.sendMessage(msg.chat.id,
+        return reply(msg,
           `📋 <b>No error logs found for ${targetDate}</b>`,
           { parse_mode: 'HTML' }
         )
@@ -2286,7 +2288,7 @@ bot.onText(/^\/errorlog(?:\s+(.+))?$/, async (msg, match) => {
       const logs = await getAllErrorLogs();
 
       if (logs.length === 0) {
-        return bot.sendMessage(msg.chat.id,
+        return reply(msg,
           `📋 <b>Error Logs</b>\n\n<i>No error logs found.</i>`,
           { parse_mode: 'HTML' }
         )
@@ -2356,7 +2358,7 @@ bot.onText(/^\/errorlog(?:\s+(.+))?$/, async (msg, match) => {
         message += `\n\n<i>✅ Marked ${displayedIds.length} log(s) as reminded</i>`;
       }
 
-      return bot.sendMessage(msg.chat.id, message, { parse_mode: 'HTML' })
+      return reply(msg, message, { parse_mode: 'HTML' })
         .then(m => trackMessage(m.chat.id, m.message_id))
         .catch(err => console.error("Error:", err));
     }
@@ -2367,7 +2369,7 @@ bot.onText(/^\/errorlog(?:\s+(.+))?$/, async (msg, match) => {
     const log = logs.find(l => l.id.startsWith(logId)) || await getErrorLogById(logId);
 
     if (!log) {
-      return bot.sendMessage(msg.chat.id,
+      return reply(msg,
         `❌ <b>Error log not found</b>\n\n<i>ID: ${logId}</i>`,
         { parse_mode: 'HTML' }
       )
@@ -2406,13 +2408,13 @@ bot.onText(/^\/errorlog(?:\s+(.+))?$/, async (msg, match) => {
       message += `\n\n<i>✅ Marked as reminded</i>`;
     }
 
-    return bot.sendMessage(msg.chat.id, message, { parse_mode: 'HTML' })
+    return reply(msg, message, { parse_mode: 'HTML' })
       .then(m => trackMessage(m.chat.id, m.message_id))
       .catch(err => console.error("Error:", err));
 
   } catch (err) {
     console.error("Error in /errorlog command:", err);
-    bot.sendMessage(msg.chat.id, "❌ <b>Error!</b>\nSomething went wrong while fetching error logs.", { parse_mode: 'HTML' })
+    reply(msg, "❌ <b>Error!</b>\nSomething went wrong while fetching error logs.", { parse_mode: 'HTML' })
       .then(msg => trackMessage(msg.chat.id, msg.message_id))
       .catch(err => console.error("Error sending error message:", err));
   }
@@ -2422,13 +2424,13 @@ bot.onText(/^\/errorlog(?:\s+(.+))?$/, async (msg, match) => {
 bot.onText(/^\/lunch$/, async (msg) => {
   trackCommand(msg.chat.id, msg.message_id);
   if (msg.chat.type !== 'private' && msg.message_thread_id !== BOT_TOPIC_ID) {
-    return bot.sendMessage(msg.chat.id, '⚠️ Please use the <b>PayrollBot</b> topic to interact with this bot.', { parse_mode: 'HTML', ...(msg.message_thread_id && { message_thread_id: msg.message_thread_id }) });
+    return reply(msg, '⚠️ Please use the <b>PayrollBot</b> topic to interact with this bot.', { parse_mode: 'HTML', ...(msg.message_thread_id && { message_thread_id: msg.message_thread_id }) });
   }
   try {
     // Check if today is a holiday
     const holiday = getTodayHoliday();
     if (holiday) {
-      return bot.sendMessage(msg.chat.id,
+      return reply(msg,
         `🗓️ *Today is ${holiday.name}*\n\n_No lunch menu available on holidays._`,
         { parse_mode: 'Markdown' }
       )
@@ -2447,7 +2449,7 @@ bot.onText(/^\/lunch$/, async (msg) => {
     const menuFilePath = path.join(__dirname, 'data', 'lunch-menu.json');
 
     if (!fs.existsSync(menuFilePath)) {
-      return bot.sendMessage(msg.chat.id,
+      return reply(msg,
         "❌ *Menu file not found!*\n\nThe lunch menu data is not available.",
         { parse_mode: 'Markdown' }
       )
@@ -2462,7 +2464,7 @@ bot.onText(/^\/lunch$/, async (msg) => {
 
     // Navigate to the menu: menuData[year][month].schedule[date]
     if (!menuData[year] || !menuData[year][month] || !menuData[year][month].schedule) {
-      return bot.sendMessage(msg.chat.id,
+      return reply(msg,
         `❌ *No menu available*\n\n_No lunch menu data for ${year}-${month}._`,
         { parse_mode: 'Markdown' }
       )
@@ -2473,7 +2475,7 @@ bot.onText(/^\/lunch$/, async (msg) => {
     const menu = menuData[year][month].schedule[todayStr];
 
     if (!menu) {
-      return bot.sendMessage(msg.chat.id,
+      return reply(msg,
         `❌ *No menu available today*\n\n_No lunch menu scheduled for ${todayStr}._`,
         { parse_mode: 'Markdown' }
       )
@@ -2490,13 +2492,13 @@ bot.onText(/^\/lunch$/, async (msg) => {
 
     message += `\n_Selamat makan! 😋_`;
 
-    bot.sendMessage(msg.chat.id, message, { parse_mode: 'Markdown' })
+    reply(msg, message, { parse_mode: 'Markdown' })
       .then(m => trackMessage(m.chat.id, m.message_id))
       .catch(err => console.error("Error:", err));
 
   } catch (err) {
     console.error("Error in /lunch command:", err);
-    bot.sendMessage(msg.chat.id, "❌ *Error!*\nSomething went wrong while fetching lunch menu.", { parse_mode: 'Markdown' })
+    reply(msg, "❌ *Error!*\nSomething went wrong while fetching lunch menu.", { parse_mode: 'Markdown' })
       .then(msg => trackMessage(msg.chat.id, msg.message_id))
       .catch(err => console.error("Error sending error message:", err));
   }
@@ -2506,7 +2508,7 @@ bot.onText(/^\/lunch$/, async (msg) => {
 bot.onText(/^\/holiday$/, async (msg) => {
   trackCommand(msg.chat.id, msg.message_id);
   if (msg.chat.type !== 'private' && msg.message_thread_id !== BOT_TOPIC_ID) {
-    return bot.sendMessage(msg.chat.id, '⚠️ Please use the <b>PayrollBot</b> topic to interact with this bot.', { parse_mode: 'HTML', ...(msg.message_thread_id && { message_thread_id: msg.message_thread_id }) });
+    return reply(msg, '⚠️ Please use the <b>PayrollBot</b> topic to interact with this bot.', { parse_mode: 'HTML', ...(msg.message_thread_id && { message_thread_id: msg.message_thread_id }) });
   }
   try {
     const today = getTodayHoliday();
@@ -2535,13 +2537,13 @@ bot.onText(/^\/holiday$/, async (msg) => {
       });
     }
 
-    bot.sendMessage(msg.chat.id, message, { parse_mode: 'Markdown' })
+    reply(msg, message, { parse_mode: 'Markdown' })
       .then(msg => trackMessage(msg.chat.id, msg.message_id))
       .catch(err => console.error("Error sending holiday info:", err));
 
   } catch (err) {
     console.error("Error in /holiday command:", err);
-    bot.sendMessage(msg.chat.id, "❌ *Error!*\nSomething went wrong while fetching holiday information.", { parse_mode: 'Markdown' })
+    reply(msg, "❌ *Error!*\nSomething went wrong while fetching holiday information.", { parse_mode: 'Markdown' })
       .then(msg => trackMessage(msg.chat.id, msg.message_id))
       .catch(err => console.error("Error sending error message:", err));
   }
@@ -2551,13 +2553,13 @@ bot.onText(/^\/holiday$/, async (msg) => {
 bot.onText(/^\/de64(?:\s+(.+))?$/, async (msg, match) => {
   trackCommand(msg.chat.id, msg.message_id);
   if (msg.chat.type !== 'private' && msg.message_thread_id !== BOT_TOPIC_ID) {
-    return bot.sendMessage(msg.chat.id, '⚠️ Please use the <b>PayrollBot</b> topic to interact with this bot.', { parse_mode: 'HTML', ...(msg.message_thread_id && { message_thread_id: msg.message_thread_id }) });
+    return reply(msg, '⚠️ Please use the <b>PayrollBot</b> topic to interact with this bot.', { parse_mode: 'HTML', ...(msg.message_thread_id && { message_thread_id: msg.message_thread_id }) });
   }
   try {
     const base64String = match[1];
 
     if (!base64String) {
-      return bot.sendMessage(msg.chat.id,
+      return reply(msg,
         "❌ *Format salah!*\n\n*Usage:*\n`/de64 <base64_string>`\n\n*Example:*\n`/de64 W3siREJFTkdJTkUiOi...`\n\n*Description:*\nDecodes base64 string and shows only _fin and _admin database credentials.",
         { parse_mode: 'Markdown' }
       )
@@ -2566,7 +2568,7 @@ bot.onText(/^\/de64(?:\s+(.+))?$/, async (msg, match) => {
     }
 
     // Send processing message
-    bot.sendMessage(msg.chat.id, "⏳ *Processing...*\nDecoding base64 string...", { parse_mode: 'Markdown' })
+    reply(msg, "⏳ *Processing...*\nDecoding base64 string...", { parse_mode: 'Markdown' })
       .then(msg => trackMessage(msg.chat.id, msg.message_id))
       .catch(err => console.error("Error sending processing message:", err));
 
@@ -2600,7 +2602,7 @@ bot.onText(/^\/de64(?:\s+(.+))?$/, async (msg, match) => {
     }
 
     if (filtered.length === 0) {
-      return bot.sendMessage(msg.chat.id,
+      return reply(msg,
         "⚠️ *No results found!*\n\nNo database credentials with _fin or _admin were found in the decoded data.",
         { parse_mode: 'Markdown' }
       )
@@ -2614,7 +2616,7 @@ bot.onText(/^\/de64(?:\s+(.+))?$/, async (msg, match) => {
     // Send the result (use code block for formatting)
     const resultMessage = `✅ *Decoded & Filtered (${filtered.length} credentials)*\n\n\`\`\`json\n${prettyJson}\n\`\`\``;
 
-    bot.sendMessage(msg.chat.id, resultMessage, { parse_mode: 'Markdown' })
+    reply(msg, resultMessage, { parse_mode: 'Markdown' })
       .then(msg => trackMessage(msg.chat.id, msg.message_id))
       .catch(err => console.error("Error sending de64 result:", err));
 
@@ -2630,7 +2632,7 @@ bot.onText(/^\/de64(?:\s+(.+))?$/, async (msg, match) => {
       errorMsg += "Something went wrong while processing your request.\n\n" + err.message;
     }
 
-    bot.sendMessage(msg.chat.id, errorMsg, { parse_mode: 'Markdown' })
+    reply(msg, errorMsg, { parse_mode: 'Markdown' })
       .then(msg => trackMessage(msg.chat.id, msg.message_id))
       .catch(err => console.error("Error sending error message:", err));
   }
