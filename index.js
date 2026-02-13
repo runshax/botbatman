@@ -867,16 +867,17 @@ bot.on('polling_error', (error) => {
   console.error('Polling error:', error.code, error.message);
 });
 
-// ==================== DEBUG: LOG THREAD ID ====================
-bot.on('message', (msg) => {
-  if (msg.message_thread_id) {
-    console.log(`[DEBUG] chat_id: ${msg.chat.id} | thread_id: ${msg.message_thread_id} | from: ${msg.from?.username} | text: ${msg.text}`);
-  }
-});
+// ==================== TOPIC GUARD ====================
+// Only allow user commands in the PayrollBot topic (thread 6119)
+const BOT_TOPIC_ID = 6119;
+
 
 // ==================== HELP COMMAND ====================
 bot.onText(/^\/help$/, (msg) => {
   trackCommand(msg.chat.id, msg.message_id);
+  if (msg.message_thread_id !== BOT_TOPIC_ID) {
+    return bot.sendMessage(msg.chat.id, '⚠️ Please use the <b>PayrollBot</b> topic to interact with this bot.', { parse_mode: 'HTML', message_thread_id: BOT_TOPIC_ID });
+  }
   const helpMessage = `🤖 *Bot Command List*\n\n` +
     `*Available Commands:*\n\n` +
 
@@ -976,9 +977,15 @@ bot.onText(/^\/help$/, (msg) => {
 });
 
 bot.onText(/^\/dev(?:\s+(.+))?$/, async (msg, match) => {
+  if (msg.message_thread_id !== BOT_TOPIC_ID) {
+    return bot.sendMessage(msg.chat.id, '⚠️ Please use the <b>PayrollBot</b> topic to interact with this bot.', { parse_mode: 'HTML', message_thread_id: BOT_TOPIC_ID });
+  }
   // Only track if it's not a forwarded message with URL (containing ://)
   if (!msg.text.includes('://')) {
     trackCommand(msg.chat.id, msg.message_id);
+  if (msg.message_thread_id !== BOT_TOPIC_ID) {
+    return bot.sendMessage(msg.chat.id, '⚠️ Please use the <b>PayrollBot</b> topic to interact with this bot.', { parse_mode: 'HTML', message_thread_id: BOT_TOPIC_ID });
+  }
   }
   const userId = msg.from.id.toString();
 
@@ -1141,6 +1148,9 @@ bot.onText(/^\/dev(?:\s+(.+))?$/, async (msg, match) => {
 // ==================== NEW ENHANCEMENT: PASSWORD RESET ====================
 bot.onText(/^\/reset(?:\s+(.+))?$/, async (msg, match) => {
   trackCommand(msg.chat.id, msg.message_id);
+  if (msg.message_thread_id !== BOT_TOPIC_ID) {
+    return bot.sendMessage(msg.chat.id, '⚠️ Please use the <b>PayrollBot</b> topic to interact with this bot.', { parse_mode: 'HTML', message_thread_id: BOT_TOPIC_ID });
+  }
   try {
     const input = match[1];
 
@@ -1188,6 +1198,9 @@ bot.onText(/^\/reset(?:\s+(.+))?$/, async (msg, match) => {
 // ==================== ASK COMMAND: DOCUMENTATION SEARCH ====================
 bot.onText(/^\/ask(?:\s+(.+))?$/, async (msg, match) => {
   trackCommand(msg.chat.id, msg.message_id);
+  if (msg.message_thread_id !== BOT_TOPIC_ID) {
+    return bot.sendMessage(msg.chat.id, '⚠️ Please use the <b>PayrollBot</b> topic to interact with this bot.', { parse_mode: 'HTML', message_thread_id: BOT_TOPIC_ID });
+  }
 
   try {
     const query = match[1];
@@ -1404,6 +1417,9 @@ bot.onText(/^\/ask(?:\s+(.+))?$/, async (msg, match) => {
 // ==================== NEW ENHANCEMENT: FORMULA CALCULATOR ====================
 bot.onText(/^\/parse/, async (msg) => {
   trackCommand(msg.chat.id, msg.message_id);
+  if (msg.message_thread_id !== BOT_TOPIC_ID) {
+    return bot.sendMessage(msg.chat.id, '⚠️ Please use the <b>PayrollBot</b> topic to interact with this bot.', { parse_mode: 'HTML', message_thread_id: BOT_TOPIC_ID });
+  }
   try {
     // Extract formula from message text (everything after /parse)
     const messageText = msg.text || '';
@@ -1538,6 +1554,9 @@ bot.onText(/^\/parse/, async (msg) => {
 // Auto-detect "/sfgo" followed by numbers (e.g., "/sfgo11199" or "/sfgo11199 qa")
 bot.onText(/^\/sfgo(\d+)(?:\s+(qa))?$/i, async (msg, match) => {
   trackCommand(msg.chat.id, msg.message_id);
+  if (msg.message_thread_id !== BOT_TOPIC_ID) {
+    return bot.sendMessage(msg.chat.id, '⚠️ Please use the <b>PayrollBot</b> topic to interact with this bot.', { parse_mode: 'HTML', message_thread_id: BOT_TOPIC_ID });
+  }
   try {
     const number = match[1];
     const isQa = match[2]; // Will be "qa" if present, undefined otherwise
@@ -1676,6 +1695,9 @@ const telegramToWorkUsername = {
 
 bot.onText(/^\/ticket(?:\s+(.+))?$/, async (msg, match) => {
   trackCommand(msg.chat.id, msg.message_id);
+  if (msg.message_thread_id !== BOT_TOPIC_ID) {
+    return bot.sendMessage(msg.chat.id, '⚠️ Please use the <b>PayrollBot</b> topic to interact with this bot.', { parse_mode: 'HTML', message_thread_id: BOT_TOPIC_ID });
+  }
   const userId = msg.from.id.toString();
   const input = match[1];
 
@@ -2107,6 +2129,9 @@ bot.onText(/^\/ticket(?:\s+(.+))?$/, async (msg, match) => {
 // ==================== CLEAR COMMAND ====================
 bot.onText(/^\/clear$/, async (msg) => {
   trackCommand(msg.chat.id, msg.message_id);
+  if (msg.message_thread_id !== BOT_TOPIC_ID) {
+    return bot.sendMessage(msg.chat.id, '⚠️ Please use the <b>PayrollBot</b> topic to interact with this bot.', { parse_mode: 'HTML', message_thread_id: BOT_TOPIC_ID });
+  }
   try {
     const chatIdToClean = msg.chat.id;
 
@@ -2158,6 +2183,9 @@ bot.onText(/^\/clear$/, async (msg) => {
 // ==================== ERROR LOG COMMAND ====================
 bot.onText(/^\/errorlog(?:\s+(.+))?$/, async (msg, match) => {
   trackCommand(msg.chat.id, msg.message_id);
+  if (msg.message_thread_id !== BOT_TOPIC_ID) {
+    return bot.sendMessage(msg.chat.id, '⚠️ Please use the <b>PayrollBot</b> topic to interact with this bot.', { parse_mode: 'HTML', message_thread_id: BOT_TOPIC_ID });
+  }
   try {
     const subCommand = match[1] ? match[1].trim() : null;
 
@@ -2388,6 +2416,9 @@ bot.onText(/^\/errorlog(?:\s+(.+))?$/, async (msg, match) => {
 // ==================== LUNCH MENU COMMAND ====================
 bot.onText(/^\/lunch$/, async (msg) => {
   trackCommand(msg.chat.id, msg.message_id);
+  if (msg.message_thread_id !== BOT_TOPIC_ID) {
+    return bot.sendMessage(msg.chat.id, '⚠️ Please use the <b>PayrollBot</b> topic to interact with this bot.', { parse_mode: 'HTML', message_thread_id: BOT_TOPIC_ID });
+  }
   try {
     // Check if today is a holiday
     const holiday = getTodayHoliday();
@@ -2469,6 +2500,9 @@ bot.onText(/^\/lunch$/, async (msg) => {
 // ==================== HOLIDAY COMMAND ====================
 bot.onText(/^\/holiday$/, async (msg) => {
   trackCommand(msg.chat.id, msg.message_id);
+  if (msg.message_thread_id !== BOT_TOPIC_ID) {
+    return bot.sendMessage(msg.chat.id, '⚠️ Please use the <b>PayrollBot</b> topic to interact with this bot.', { parse_mode: 'HTML', message_thread_id: BOT_TOPIC_ID });
+  }
   try {
     const today = getTodayHoliday();
     const tomorrow = getTomorrowHoliday();
@@ -2511,6 +2545,9 @@ bot.onText(/^\/holiday$/, async (msg) => {
 // ==================== BASE64 DECODE COMMAND ====================
 bot.onText(/^\/de64(?:\s+(.+))?$/, async (msg, match) => {
   trackCommand(msg.chat.id, msg.message_id);
+  if (msg.message_thread_id !== BOT_TOPIC_ID) {
+    return bot.sendMessage(msg.chat.id, '⚠️ Please use the <b>PayrollBot</b> topic to interact with this bot.', { parse_mode: 'HTML', message_thread_id: BOT_TOPIC_ID });
+  }
   try {
     const base64String = match[1];
 
