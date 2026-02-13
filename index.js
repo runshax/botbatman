@@ -871,10 +871,10 @@ bot.on('polling_error', (error) => {
 // Only allow user commands in the PayrollBot topic (thread 6119)
 const BOT_TOPIC_ID = 6119;
 
-// Temp: log thread_id for any message in a topic
+// Temp: log chat_id and thread_id for all group messages
 bot.on('message', (msg) => {
-  if (msg.message_thread_id) {
-    console.log(`[TOPIC] chat_id: ${msg.chat.id} | thread_id: ${msg.message_thread_id} | text: ${msg.text}`);
+  if (msg.chat.type !== 'private') {
+    console.log(`[TOPIC] chat_id: ${msg.chat.id} | thread_id: ${msg.message_thread_id || 'none'} | text: ${msg.text}`);
   }
 });
 
