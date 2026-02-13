@@ -295,11 +295,15 @@ app.get('/', async (req, res) => {
         const parsed = JSON.parse(log.data);
 
         // Skip if it's a database/query error (check file field)
+        // Exception: allow DEADLOCK errors through
         if (parsed.file && (
           parsed.file.includes('QueryFailedError') ||
           parsed.file.includes('ConnectionError') ||
           parsed.file.includes('DatabaseError')
         )) {
+          if (parsed.message && parsed.message.toUpperCase().includes('DEADLOCK')) {
+            return true;
+          }
           return false;
         }
 
@@ -324,12 +328,12 @@ app.get('/', async (req, res) => {
     if (actualErrors.length > 0) {
       console.log(`Found ${actualErrors.length} actual error logs (filtered from ${unremindedLogs.length} total), sending to Telegram...`);
 
-      // Show only first 10 from actual errors
-      const displayLogs = actualErrors.slice(0, 10);
-      const remainingLogs = actualErrors.slice(10);
+      // Show only first 5 from actual errors
+      const displayLogs = actualErrors.slice(0, 5);
+      const remainingLogs = actualErrors.slice(5);
 
       // Prepare message - same format as /errorlog command
-      let message = `🚨 <b>New Error Logs</b> (${actualErrors.length} total, showing 10)\n\n`;
+      let message = `🚨 <b>New Error Logs</b> (${actualErrors.length} total, showing 5)\n\n`;
 
       for (const log of displayLogs) {
         const date = toJakartaDate(log.created_date);
@@ -2250,9 +2254,9 @@ bot.onText(/^\/errorlog(?:\s+(.+))?$/, async (msg, match) => {
           .catch(err => console.error("Error:", err));
       }
 
-      // Show latest 10 logs
-      const displayLogs = logs.slice(0, 10);
-      let message = `📋 <b>Error Logs</b> (${logs.length} total, showing latest 10)\n\n`;
+      // Show latest 5 logs
+      const displayLogs = logs.slice(0, 5);
+      let message = `📋 <b>Error Logs</b> (${logs.length} total, showing latest 5)\n\n`;
 
       for (const log of displayLogs) {
         const date = toJakartaDate(log.created_date);
