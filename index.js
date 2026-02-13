@@ -2129,9 +2129,7 @@ bot.onText(/^\/ticket(?:\s+(.+))?$/, async (msg, match) => {
 // ==================== CLEAR COMMAND ====================
 bot.onText(/^\/clear$/, async (msg) => {
   trackCommand(msg.chat.id, msg.message_id);
-  if (msg.message_thread_id !== BOT_TOPIC_ID) {
-    return bot.sendMessage(msg.chat.id, '⚠️ Please use the <b>PayrollBot</b> topic to interact with this bot.', { parse_mode: 'HTML', message_thread_id: BOT_TOPIC_ID });
-  }
+  // /clear is allowed from any topic so it can clean up alert messages
   try {
     const chatIdToClean = msg.chat.id;
 
