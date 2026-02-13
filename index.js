@@ -883,7 +883,7 @@ bot.on('message', (msg) => {
 bot.onText(/^\/help$/, (msg) => {
   trackCommand(msg.chat.id, msg.message_id);
   if (msg.chat.type !== 'private' && msg.message_thread_id !== BOT_TOPIC_ID) {
-    return bot.sendMessage(msg.chat.id, '⚠️ Please use the <b>PayrollBot</b> topic to interact with this bot.', { parse_mode: 'HTML', message_thread_id: BOT_TOPIC_ID });
+    return bot.sendMessage(msg.chat.id, '⚠️ Please use the <b>PayrollBot</b> topic to interact with this bot.', { parse_mode: 'HTML', ...(msg.message_thread_id && { message_thread_id: msg.message_thread_id }) });
   }
   const helpMessage = `🤖 *Bot Command List*\n\n` +
     `*Available Commands:*\n\n` +
@@ -985,13 +985,13 @@ bot.onText(/^\/help$/, (msg) => {
 
 bot.onText(/^\/dev(?:\s+(.+))?$/, async (msg, match) => {
   if (msg.chat.type !== 'private' && msg.message_thread_id !== BOT_TOPIC_ID) {
-    return bot.sendMessage(msg.chat.id, '⚠️ Please use the <b>PayrollBot</b> topic to interact with this bot.', { parse_mode: 'HTML', message_thread_id: BOT_TOPIC_ID });
+    return bot.sendMessage(msg.chat.id, '⚠️ Please use the <b>PayrollBot</b> topic to interact with this bot.', { parse_mode: 'HTML', ...(msg.message_thread_id && { message_thread_id: msg.message_thread_id }) });
   }
   // Only track if it's not a forwarded message with URL (containing ://)
   if (!msg.text.includes('://')) {
     trackCommand(msg.chat.id, msg.message_id);
   if (msg.chat.type !== 'private' && msg.message_thread_id !== BOT_TOPIC_ID) {
-    return bot.sendMessage(msg.chat.id, '⚠️ Please use the <b>PayrollBot</b> topic to interact with this bot.', { parse_mode: 'HTML', message_thread_id: BOT_TOPIC_ID });
+    return bot.sendMessage(msg.chat.id, '⚠️ Please use the <b>PayrollBot</b> topic to interact with this bot.', { parse_mode: 'HTML', ...(msg.message_thread_id && { message_thread_id: msg.message_thread_id }) });
   }
   }
   const userId = msg.from.id.toString();
@@ -1156,7 +1156,7 @@ bot.onText(/^\/dev(?:\s+(.+))?$/, async (msg, match) => {
 bot.onText(/^\/reset(?:\s+(.+))?$/, async (msg, match) => {
   trackCommand(msg.chat.id, msg.message_id);
   if (msg.chat.type !== 'private' && msg.message_thread_id !== BOT_TOPIC_ID) {
-    return bot.sendMessage(msg.chat.id, '⚠️ Please use the <b>PayrollBot</b> topic to interact with this bot.', { parse_mode: 'HTML', message_thread_id: BOT_TOPIC_ID });
+    return bot.sendMessage(msg.chat.id, '⚠️ Please use the <b>PayrollBot</b> topic to interact with this bot.', { parse_mode: 'HTML', ...(msg.message_thread_id && { message_thread_id: msg.message_thread_id }) });
   }
   try {
     const input = match[1];
@@ -1206,7 +1206,7 @@ bot.onText(/^\/reset(?:\s+(.+))?$/, async (msg, match) => {
 bot.onText(/^\/ask(?:\s+(.+))?$/, async (msg, match) => {
   trackCommand(msg.chat.id, msg.message_id);
   if (msg.chat.type !== 'private' && msg.message_thread_id !== BOT_TOPIC_ID) {
-    return bot.sendMessage(msg.chat.id, '⚠️ Please use the <b>PayrollBot</b> topic to interact with this bot.', { parse_mode: 'HTML', message_thread_id: BOT_TOPIC_ID });
+    return bot.sendMessage(msg.chat.id, '⚠️ Please use the <b>PayrollBot</b> topic to interact with this bot.', { parse_mode: 'HTML', ...(msg.message_thread_id && { message_thread_id: msg.message_thread_id }) });
   }
 
   try {
@@ -1425,7 +1425,7 @@ bot.onText(/^\/ask(?:\s+(.+))?$/, async (msg, match) => {
 bot.onText(/^\/parse/, async (msg) => {
   trackCommand(msg.chat.id, msg.message_id);
   if (msg.chat.type !== 'private' && msg.message_thread_id !== BOT_TOPIC_ID) {
-    return bot.sendMessage(msg.chat.id, '⚠️ Please use the <b>PayrollBot</b> topic to interact with this bot.', { parse_mode: 'HTML', message_thread_id: BOT_TOPIC_ID });
+    return bot.sendMessage(msg.chat.id, '⚠️ Please use the <b>PayrollBot</b> topic to interact with this bot.', { parse_mode: 'HTML', ...(msg.message_thread_id && { message_thread_id: msg.message_thread_id }) });
   }
   try {
     // Extract formula from message text (everything after /parse)
@@ -1562,7 +1562,7 @@ bot.onText(/^\/parse/, async (msg) => {
 bot.onText(/^\/sfgo(\d+)(?:\s+(qa))?$/i, async (msg, match) => {
   trackCommand(msg.chat.id, msg.message_id);
   if (msg.chat.type !== 'private' && msg.message_thread_id !== BOT_TOPIC_ID) {
-    return bot.sendMessage(msg.chat.id, '⚠️ Please use the <b>PayrollBot</b> topic to interact with this bot.', { parse_mode: 'HTML', message_thread_id: BOT_TOPIC_ID });
+    return bot.sendMessage(msg.chat.id, '⚠️ Please use the <b>PayrollBot</b> topic to interact with this bot.', { parse_mode: 'HTML', ...(msg.message_thread_id && { message_thread_id: msg.message_thread_id }) });
   }
   try {
     const number = match[1];
@@ -1703,7 +1703,7 @@ const telegramToWorkUsername = {
 bot.onText(/^\/ticket(?:\s+(.+))?$/, async (msg, match) => {
   trackCommand(msg.chat.id, msg.message_id);
   if (msg.chat.type !== 'private' && msg.message_thread_id !== BOT_TOPIC_ID) {
-    return bot.sendMessage(msg.chat.id, '⚠️ Please use the <b>PayrollBot</b> topic to interact with this bot.', { parse_mode: 'HTML', message_thread_id: BOT_TOPIC_ID });
+    return bot.sendMessage(msg.chat.id, '⚠️ Please use the <b>PayrollBot</b> topic to interact with this bot.', { parse_mode: 'HTML', ...(msg.message_thread_id && { message_thread_id: msg.message_thread_id }) });
   }
   const userId = msg.from.id.toString();
   const input = match[1];
@@ -2189,7 +2189,7 @@ bot.onText(/^\/clear$/, async (msg) => {
 bot.onText(/^\/errorlog(?:\s+(.+))?$/, async (msg, match) => {
   trackCommand(msg.chat.id, msg.message_id);
   if (msg.chat.type !== 'private' && msg.message_thread_id !== BOT_TOPIC_ID) {
-    return bot.sendMessage(msg.chat.id, '⚠️ Please use the <b>PayrollBot</b> topic to interact with this bot.', { parse_mode: 'HTML', message_thread_id: BOT_TOPIC_ID });
+    return bot.sendMessage(msg.chat.id, '⚠️ Please use the <b>PayrollBot</b> topic to interact with this bot.', { parse_mode: 'HTML', ...(msg.message_thread_id && { message_thread_id: msg.message_thread_id }) });
   }
   try {
     const subCommand = match[1] ? match[1].trim() : null;
@@ -2422,7 +2422,7 @@ bot.onText(/^\/errorlog(?:\s+(.+))?$/, async (msg, match) => {
 bot.onText(/^\/lunch$/, async (msg) => {
   trackCommand(msg.chat.id, msg.message_id);
   if (msg.chat.type !== 'private' && msg.message_thread_id !== BOT_TOPIC_ID) {
-    return bot.sendMessage(msg.chat.id, '⚠️ Please use the <b>PayrollBot</b> topic to interact with this bot.', { parse_mode: 'HTML', message_thread_id: BOT_TOPIC_ID });
+    return bot.sendMessage(msg.chat.id, '⚠️ Please use the <b>PayrollBot</b> topic to interact with this bot.', { parse_mode: 'HTML', ...(msg.message_thread_id && { message_thread_id: msg.message_thread_id }) });
   }
   try {
     // Check if today is a holiday
@@ -2506,7 +2506,7 @@ bot.onText(/^\/lunch$/, async (msg) => {
 bot.onText(/^\/holiday$/, async (msg) => {
   trackCommand(msg.chat.id, msg.message_id);
   if (msg.chat.type !== 'private' && msg.message_thread_id !== BOT_TOPIC_ID) {
-    return bot.sendMessage(msg.chat.id, '⚠️ Please use the <b>PayrollBot</b> topic to interact with this bot.', { parse_mode: 'HTML', message_thread_id: BOT_TOPIC_ID });
+    return bot.sendMessage(msg.chat.id, '⚠️ Please use the <b>PayrollBot</b> topic to interact with this bot.', { parse_mode: 'HTML', ...(msg.message_thread_id && { message_thread_id: msg.message_thread_id }) });
   }
   try {
     const today = getTodayHoliday();
@@ -2551,7 +2551,7 @@ bot.onText(/^\/holiday$/, async (msg) => {
 bot.onText(/^\/de64(?:\s+(.+))?$/, async (msg, match) => {
   trackCommand(msg.chat.id, msg.message_id);
   if (msg.chat.type !== 'private' && msg.message_thread_id !== BOT_TOPIC_ID) {
-    return bot.sendMessage(msg.chat.id, '⚠️ Please use the <b>PayrollBot</b> topic to interact with this bot.', { parse_mode: 'HTML', message_thread_id: BOT_TOPIC_ID });
+    return bot.sendMessage(msg.chat.id, '⚠️ Please use the <b>PayrollBot</b> topic to interact with this bot.', { parse_mode: 'HTML', ...(msg.message_thread_id && { message_thread_id: msg.message_thread_id }) });
   }
   try {
     const base64String = match[1];
