@@ -871,6 +871,14 @@ bot.on('polling_error', (error) => {
 // Only allow user commands in the PayrollBot topic (thread 6119)
 const BOT_TOPIC_ID = 6119;
 
+// Auto-delete non-command messages in PayrollBot topic
+bot.on('message', (msg) => {
+  if (msg.message_thread_id !== BOT_TOPIC_ID) return; // only in PayrollBot topic
+  if (!msg.text || msg.text.startsWith('/')) return;   // allow commands, ignore non-text
+  // Delete regular chat messages
+  bot.deleteMessage(msg.chat.id, msg.message_id).catch(() => {});
+});
+
 // Helper: reply in the same topic/thread the command was sent from
 const reply = (msg, text, opts = {}) => {
   const options = { ...opts };
