@@ -2146,7 +2146,7 @@ bot.onText(/^\/clear$/, async (msg) => {
 
     // Check if there are no messages to delete
     if (messageIds.length === 0) {
-      return bot.sendMessage(chatIdToClean, "✅ No bot messages to delete in this chat.")
+      return reply(msg, "✅ No bot messages to delete in this chat.")
         .then(m => trackMessage(m.chat.id, m.message_id))
         .catch(err => console.error("Error sending clear response:", err));
     }
@@ -2154,7 +2154,7 @@ bot.onText(/^\/clear$/, async (msg) => {
     let deletedCount = 0;
 
     // Send initial status message
-    const statusMsg = await bot.sendMessage(chatIdToClean, "🗑️ *Deleting bot messages...*", { parse_mode: 'Markdown' });
+    const statusMsg = await reply(msg, "🗑️ *Deleting bot messages...*", { parse_mode: 'Markdown' });
 
     // Delete all bot messages
     for (const messageId of messageIds) {
