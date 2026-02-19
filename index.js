@@ -6,7 +6,7 @@ const { parseFormula, addCustomFunction, getSupportedFunctions } = require('./se
 
 
 const { getTodayHoliday, getTomorrowHoliday, getUpcomingHolidays, formatDateIndonesian } = require('./services/indonesianHolidays');
-const { initDatabase, addCredential, getCredential, getCredentialBySfgo, getAllCredentials, deleteCredential, saveErrorLog, saveErrorLogBatch, getAllErrorLogs, getErrorLogById, deleteErrorLog, deleteAllErrorLogs, getUnremindedErrorLogs, markErrorLogsAsReminded, getErrorLogsByDate } = require('./services/database');
+const { initDatabase, addCredential, getCredential, getCredentialBySfgo, getAllCredentials, deleteCredential, saveErrorLog, saveErrorLogBatch, getAllErrorLogs, getErrorLogById, deleteErrorLog, deleteAllErrorLogs, getUnremindedErrorLogs, markErrorLogsAsReminded, getErrorLogsByDate, deleteOldErrorLogs } = require('./services/database');
 require('dotenv').config();
 
 // Verify fetch is available (Node.js 18+ has it built-in)
@@ -849,11 +849,10 @@ cron.schedule('30 7 * * *', async () => {
     fs.unlinkSync(filePath);
 
     // Auto-cleanup: delete error logs older than 5 days
-    // TODO: disabled - verify timezone of created_date before enabling
-    // const cleanup = await deleteOldErrorLogs(5);
-    // if (cleanup.success && cleanup.deleted > 0) {
-    //   console.log(`Auto-cleanup: deleted ${cleanup.deleted} error log(s) older than 5 days`);
-    // }
+    const cleanup = await deleteOldErrorLogs(5);
+    if (cleanup.success && cleanup.deleted > 0) {
+      console.log(`Auto-cleanup: deleted ${cleanup.deleted} error log(s) older than 5 days`);
+    }
 
   } catch (error) {
     console.error('Error in daily error log report:', error);
