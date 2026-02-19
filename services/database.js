@@ -276,7 +276,7 @@ const deleteOldErrorLogs = async (days = 5) => {
   try {
     const result = await pool.query(
       `DELETE FROM error_msg_log
-       WHERE DATE(created_date AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Jakarta') <= (CURRENT_DATE AT TIME ZONE 'Asia/Jakarta' - INTERVAL '${days} days')
+       WHERE DATE(created_date AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Jakarta') <= (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Jakarta' - INTERVAL '${days} days')::date
        RETURNING id`
     );
     return { success: true, deleted: result.rowCount };
