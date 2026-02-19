@@ -328,12 +328,12 @@ app.get('/', async (req, res) => {
     if (actualErrors.length > 0) {
       console.log(`Found ${actualErrors.length} actual error logs (filtered from ${unremindedLogs.length} total), sending to Telegram...`);
 
-      // Show only first 5 from actual errors
-      const displayLogs = actualErrors.slice(0, 5);
-      const remainingLogs = actualErrors.slice(5);
+      // Show only first 2 from actual errors
+      const displayLogs = actualErrors.slice(0, 2);
+      const remainingLogs = actualErrors.slice(2);
 
       // Prepare message - same format as /errorlog command
-      let message = `🚨 <b>New Error Logs</b> (${actualErrors.length} total, showing 5)\n\n`;
+      let message = `🚨 <b>New Error Logs</b> (${actualErrors.length} total, showing 2)\n\n`;
 
       for (const log of displayLogs) {
         const date = toJakartaDate(log.created_date);
