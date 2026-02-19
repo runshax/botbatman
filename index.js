@@ -1043,8 +1043,7 @@ bot.onText(/^\/dev(?:\s+(.+))?$/, async (msg, match) => {
       const action = isUpdate ? 'updated' : 'saved';
       const emoji = isUpdate ? '🔄' : '✅';
       return reply(msg,
-        `${emoji} *Credential ${action}!*\n\nCountry: ${country}\nSFGO: ${sfgo}\nUsername: ${username}\nURL: ${url}\n\nUse \`/dev ${sfgo}\` to view`,
-        { parse_mode: 'Markdown' }
+        `${emoji} Credential ${action}!\n\nCountry: ${country}\nSFGO: ${sfgo}\nUsername: ${username}\nURL: ${url}\n\nUse /dev ${sfgo} to view`
       )
         .then(m => trackMessage(m.chat.id, m.message_id))
         .catch(err => console.error("Error:", err));
