@@ -2625,6 +2625,129 @@ bot.onText(/^\/dbbackup$/, async (msg) => {
   }
 });
 
+// ==================== DB RESTORE COMMAND ====================
+// Track pending restore uploads
+const pendingDbRestore = new Map(); // chatId -> { messageId, timestamp }
+
+bot.onText(/^\/dbstore$/, async (msg) => {
+  trackCommand(msg.chat.id, msg.message_id);
+  // /dbstore is allowed from any topic
+
+  try {
+    const promptMsg = await reply(msg, '📤 Please upload your SQL backup file (.sql or .txt)\n\n⏱️ Waiting for file upload (60 seconds)...');
+
+    // Store pending restore request
+    pendingDbRestore.set(msg.chat.id, {
+      messageId: promptMsg.message_id,
+      timestamp: Date.now(),
+      threadId: msg.message_thread_id
+    });
+
+    // Auto-cleanup after 60 seconds
+    setTimeout(() => {
+      if (pendingDbRestore.has(msg.chat.id)) {
+        pendingDbRestore.delete(msg.chat.id);
+        bot.deleteMessage(msg.chat.id, promptMsg.message_id).catch(() => {});
+      }
+    }, 60000);
+
+  } catch (error) {
+    console.error('Error in /dbstore:', error);
+    reply(msg, `❌ Error: ${error.message}`)
+      .then(m => trackMessage(m.chat.id, m.message_id))
+      .catch(err => console.error("Error:", err));
+  }
+});
+
+// Handle file uploads for dbstore
+bot.on('document', async (msg) => {
+  const chatId = msg.chat.id;
+
+  // Check if this chat is waiting for a restore file
+  if (!pendingDbRestore.has(chatId)) return;
+
+  const pending = pendingDbRestore.get(chatId);
+  const document = msg.document;
+
+  try {
+    // Validate file extension
+    const fileName = document.file_name;
+    if (!fileName.endsWith('.sql') && !fileName.endsWith('.txt')) {
+      await reply(msg, '❌ Invalid file type. Please upload a .sql or .txt file.');
+      return;
+    }
+
+    // Delete prompt message
+    await bot.deleteMessage(chatId, pending.messageId).catch(() => {});
+    pendingDbRestore.delete(chatId);
+
+    // Download file
+    const statusMsg = await reply(msg, '⏳ Processing SQL file...');
+    const fileStream = bot.getFileStream(document.file_id);
+
+    const fs = require('fs');
+    const path = require('path');
+    const tempDir = path.join(__dirname, 'temp');
+    if (!fs.existsSync(tempDir)) {
+      fs.mkdirSync(tempDir, { recursive: true });
+    }
+
+    const tempFilePath = path.join(tempDir, `restore_${Date.now()}.sql`);
+    const writeStream = fs.createWriteStream(tempFilePath);
+
+    await new Promise((resolve, reject) => {
+      fileStream.pipe(writeStream);
+      writeStream.on('finish', resolve);
+      writeStream.on('error', reject);
+    });
+
+    // Read and validate SQL content
+    const sqlContent = fs.readFileSync(tempFilePath, 'utf8');
+
+    if (!sqlContent.includes('INSERT INTO')) {
+      fs.unlinkSync(tempFilePath);
+      await bot.editMessageText('❌ Invalid SQL file. No INSERT statements found.', {
+        chat_id: chatId,
+        message_id: statusMsg.message_id,
+        message_thread_id: pending.threadId
+      });
+      return;
+    }
+
+    // Execute SQL
+    const { pool } = require('./services/database');
+    await pool.query(sqlContent);
+
+    // Get final counts
+    const credsCount = await pool.query('SELECT COUNT(*) FROM dev_credentials');
+    const logsCount = await pool.query('SELECT COUNT(*) FROM error_msg_log');
+
+    // Delete temp file
+    fs.unlinkSync(tempFilePath);
+
+    // Update status
+    await bot.editMessageText(
+      `✅ Database restored successfully!\n\n` +
+      `Tables:\n` +
+      `• dev_credentials: ${credsCount.rows[0].count} rows\n` +
+      `• error_msg_log: ${logsCount.rows[0].count} rows`,
+      {
+        chat_id: chatId,
+        message_id: statusMsg.message_id,
+        message_thread_id: pending.threadId
+      }
+    );
+
+  } catch (error) {
+    console.error('Error processing restore file:', error);
+    pendingDbRestore.delete(chatId);
+
+    reply(msg, `❌ Restore failed: ${error.message}`)
+      .then(m => trackMessage(m.chat.id, m.message_id))
+      .catch(err => console.error("Error:", err));
+  }
+});
+
 // ==================== BASE64 DECODE COMMAND ====================
 bot.onText(/^\/de64(?:\s+(.+))?$/, async (msg, match) => {
   trackCommand(msg.chat.id, msg.message_id);
