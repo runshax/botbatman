@@ -2556,6 +2556,75 @@ bot.onText(/^\/holiday$/, async (msg) => {
   }
 });
 
+// ==================== DB BACKUP COMMAND ====================
+bot.onText(/^\/dbbackup$/, async (msg) => {
+  trackCommand(msg.chat.id, msg.message_id);
+  // /dbbackup is allowed from any topic
+
+  try {
+    const statusMsg = await reply(msg, '⏳ Generating database backup...');
+
+    const { pool } = require('./services/database');
+    const fs = require('fs');
+    const path = require('path');
+
+    let sqlContent = `-- Database Backup\n-- Generated: ${new Date().toISOString()}\n\n`;
+
+    // Export dev_credentials
+    const credsResult = await pool.query('SELECT * FROM dev_credentials ORDER BY country');
+    if (credsResult.rows.length > 0) {
+      sqlContent += `-- Table: dev_credentials (${credsResult.rows.length} rows)\n`;
+      for (const row of credsResult.rows) {
+        const esc = (str) => str.replace(/'/g, "''");
+        const values = `'${esc(row.sfgo)}', '${esc(row.country)}', '${esc(row.username)}', '${esc(row.password)}', ${row.url ? `'${esc(row.url)}'` : 'NULL'}`;
+        sqlContent += `INSERT INTO dev_credentials (sfgo, country, username, password, url) VALUES (${values}) ON CONFLICT (sfgo) DO NOTHING;\n`;
+      }
+      sqlContent += '\n';
+    }
+
+    // Export error_msg_log
+    const logsResult = await pool.query('SELECT * FROM error_msg_log ORDER BY created_date DESC');
+    if (logsResult.rows.length > 0) {
+      sqlContent += `-- Table: error_msg_log (${logsResult.rows.length} rows)\n`;
+      for (const row of logsResult.rows) {
+        const esc = (str) => str.replace(/'/g, "''");
+        const values = `'${row.id}', '${row.created_date.toISOString()}', '${esc(row.data)}', ${row.type_data ? `'${esc(row.type_data)}'` : 'NULL'}, ${row.status_reminder ? `'${row.status_reminder}'` : 'NULL'}`;
+        sqlContent += `INSERT INTO error_msg_log (id, created_date, data, type_data, status_reminder) VALUES (${values}) ON CONFLICT (id) DO NOTHING;\n`;
+      }
+      sqlContent += '\n';
+    }
+
+    // Save to temp file
+    const tempDir = path.join(__dirname, 'temp');
+    if (!fs.existsSync(tempDir)) {
+      fs.mkdirSync(tempDir, { recursive: true });
+    }
+
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').split('T')[0];
+    const fileName = `db_backup_${timestamp}.sql`;
+    const filePath = path.join(tempDir, fileName);
+    fs.writeFileSync(filePath, sqlContent, 'utf8');
+
+    // Send file
+    await bot.sendDocument(msg.chat.id, filePath, {
+      caption: `📦 Database Backup\n\nTables:\n• dev_credentials: ${credsResult.rows.length} rows\n• error_msg_log: ${logsResult.rows.length} rows`,
+      message_thread_id: msg.message_thread_id
+    });
+
+    // Delete temp file
+    fs.unlinkSync(filePath);
+
+    // Delete status message
+    await bot.deleteMessage(msg.chat.id, statusMsg.message_id);
+
+  } catch (error) {
+    console.error('Error in /dbbackup:', error);
+    reply(msg, `❌ Backup failed: ${error.message}`)
+      .then(m => trackMessage(m.chat.id, m.message_id))
+      .catch(err => console.error("Error:", err));
+  }
+});
+
 // ==================== BASE64 DECODE COMMAND ====================
 bot.onText(/^\/de64(?:\s+(.+))?$/, async (msg, match) => {
   trackCommand(msg.chat.id, msg.message_id);

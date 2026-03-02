@@ -287,6 +287,7 @@ const deleteOldErrorLogs = async (days = 5) => {
 };
 
 module.exports = {
+  pool,
   initDatabase,
   addCredential,
   getCredential,
