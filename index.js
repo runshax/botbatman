@@ -262,140 +262,6 @@ const authenticateAPI = (req, res, next) => {
 // Health check endpoint (no auth needed)
 app.get('/', async (req, res) => {
   res.send('Bot is online and healthy! 🚀');
-
-  // Auto-send unreminded error logs to Telegram (only if REMINDER_ERROR is true)
-  const reminderEnabled = process.env.REMINDER_ERROR === 'true';
-
-  if (!reminderEnabled) {
-    return; // Skip auto-reminder if disabled
-  }
-
-  // Active window: 8:00 AM to 7:30 PM (Asia/Jakarta)
-  // Before 8 AM: skip (7:30 AM cron handles previous day)
-  // After 7:30 PM: skip (next morning report will cover it)
-  const now = new Date();
-  const jakartaTime = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Jakarta' }));
-  const currentHour = jakartaTime.getHours();
-  const currentMinute = jakartaTime.getMinutes();
-
-  const isAfter8AM = currentHour >= 8;
-  const isBefore730PM = currentHour < 19 || (currentHour === 19 && currentMinute < 30);
-
-  if (!isAfter8AM || !isBefore730PM) {
-    console.log(`Skipping auto-reminder outside active window (current Jakarta time: ${currentHour}:${String(currentMinute).padStart(2, '0')})`);
-    return;
-  }
-
-  try {
-    const unremindedLogs = await getUnremindedErrorLogs();
-
-    // Filter out query/database errors - only show actual application errors
-    const actualErrors = unremindedLogs.filter(log => {
-      try {
-        const parsed = JSON.parse(log.data);
-
-        // Skip if it's a database/query error (check file field)
-        // Exception: allow DEADLOCK errors through
-        if (parsed.file && (
-          parsed.file.includes('QueryFailedError') ||
-          parsed.file.includes('ConnectionError') ||
-          parsed.file.includes('DatabaseError')
-        )) {
-          if (parsed.message && parsed.message.toUpperCase().includes('DEADLOCK')) {
-            return true;
-          }
-          return false;
-        }
-
-        // Skip if message contains database error keywords
-        if (parsed.message) {
-          const msgLower = parsed.message.toLowerCase();
-          if (msgLower.includes('duplicate entry') ||
-              msgLower.includes('connection refused') ||
-              msgLower.includes('query failed') ||
-              msgLower.includes('database error')) {
-            return false;
-          }
-        }
-
-        return true; // It's an actual application error
-      } catch (e) {
-        // If not valid JSON, include it (plain text errors)
-        return true;
-      }
-    });
-
-    if (actualErrors.length > 0) {
-      console.log(`Found ${actualErrors.length} actual error logs (filtered from ${unremindedLogs.length} total), sending to Telegram...`);
-
-      // Show only first 2 from actual errors
-      const displayLogs = actualErrors.slice(0, 2);
-      const remainingLogs = actualErrors.slice(2);
-
-      // Prepare message - same format as /errorlog command
-      let message = `🚨 <b>New Error Logs</b> (${actualErrors.length} total, showing 2)\n\n`;
-
-      for (const log of displayLogs) {
-        const date = toJakartaDate(log.created_date);
-
-        let companyCode = '';
-        let msgText = '';
-        let queryPreview = '';
-        try {
-          const parsed = JSON.parse(log.data);
-          companyCode = parsed.companyCode || '';
-          msgText = parsed.message || '';
-          if (parsed.query) {
-            queryPreview = parsed.query.length > 150
-              ? parsed.query.substring(0, 150) + '...'
-              : parsed.query;
-          }
-        } catch (e) {
-          msgText = log.data;
-        }
-
-        // Escape HTML special characters
-        const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-
-        message += `🔸 <b>ID:</b> <code>${log.id.substring(0, 8)}</code>\n`;
-        message += `   📅 ${date}\n`;
-        if (companyCode) message += `   🏢 ${esc(companyCode)}\n`;
-        message += `   💬 ${esc(msgText)}\n`;
-        if (queryPreview) message += `   🗄 <code>${esc(queryPreview)}</code>\n`;
-        message += '\n';
-      }
-
-      // If there are more than 5, show remaining IDs (limit to 10)
-      if (remainingLogs.length > 0) {
-        const idsToShow = remainingLogs.slice(0, 10);
-        const remainingIds = idsToShow.map(log => log.id.substring(0, 8)).join(', ');
-        const hiddenCount = remainingLogs.length > 10 ? remainingLogs.length - 10 : 0;
-
-        message += `\n<i>⚠️ Additional ${remainingLogs.length} error(s) not shown:</i>\n`;
-        message += `<code>${remainingIds}</code>`;
-
-        if (hiddenCount > 0) {
-          message += `\n<i>... and ${hiddenCount} more</i>`;
-        }
-
-        message += `\n<i>Use /errorlog &lt;id&gt; to view and mark as reminded</i>`;
-      }
-
-      // Send to Telegram
-      const chatId = process.env.CHAT_ID;
-      if (chatId) {
-        await bot.sendMessage(chatId, message, { parse_mode: 'HTML' });
-
-        // Mark ONLY the displayed 5 as reminded
-        const displayedIds = displayLogs.map(log => log.id);
-        await markErrorLogsAsReminded(displayedIds);
-
-        console.log(`Sent ${displayLogs.length} error logs to Telegram and marked as reminded. ${remainingLogs.length} remaining.`);
-      }
-    }
-  } catch (err) {
-    console.error('Error in health check auto-reminder:', err);
-  }
 });
 
 // API endpoint to save error logs from external servers
@@ -862,6 +728,138 @@ cron.schedule('30 7 * * *', async () => {
   timezone: timezone
 });
 
+// ==================== SCHEDULED ERROR NOTIFICATIONS ====================
+// Helper: build and send unreminded error notification to bot topic
+const sendErrorNotificationToTopic = async (label) => {
+  const reminderEnabled = process.env.REMINDER_ERROR === 'true';
+  if (!reminderEnabled) {
+    console.log(`[${label}] Error notification skipped (REMINDER_ERROR is not true)`);
+    return;
+  }
+
+  try {
+    const unremindedLogs = await getUnremindedErrorLogs();
+
+    // Filter out query/database errors - only show actual application errors
+    const actualErrors = unremindedLogs.filter(log => {
+      try {
+        const parsed = JSON.parse(log.data);
+
+        if (parsed.file && (
+          parsed.file.includes('QueryFailedError') ||
+          parsed.file.includes('ConnectionError') ||
+          parsed.file.includes('DatabaseError')
+        )) {
+          if (parsed.message && parsed.message.toUpperCase().includes('DEADLOCK')) {
+            return true;
+          }
+          return false;
+        }
+
+        if (parsed.message) {
+          const msgLower = parsed.message.toLowerCase();
+          if (msgLower.includes('duplicate entry') ||
+            msgLower.includes('connection refused') ||
+            msgLower.includes('query failed') ||
+            msgLower.includes('database error')) {
+            return false;
+          }
+        }
+
+        return true;
+      } catch (e) {
+        return true;
+      }
+    });
+
+    if (actualErrors.length === 0) {
+      console.log(`[${label}] No new error logs to notify.`);
+      return;
+    }
+
+    console.log(`[${label}] Found ${actualErrors.length} error log(s), sending to bot topic...`);
+
+    const displayLogs = actualErrors.slice(0, 2);
+    const remainingLogs = actualErrors.slice(2);
+
+    let message = `🚨 <b>New Error Logs</b> (${actualErrors.length} total, showing 2)\n\n`;
+
+    for (const log of displayLogs) {
+      const date = toJakartaDate(log.created_date);
+
+      let companyCode = '';
+      let msgText = '';
+      let queryPreview = '';
+      try {
+        const parsed = JSON.parse(log.data);
+        companyCode = parsed.companyCode || '';
+        msgText = parsed.message || '';
+        if (parsed.query) {
+          queryPreview = parsed.query.length > 150
+            ? parsed.query.substring(0, 150) + '...'
+            : parsed.query;
+        }
+      } catch (e) {
+        msgText = log.data;
+      }
+
+      const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+      message += `🔸 <b>ID:</b> <code>${log.id.substring(0, 8)}</code>\n`;
+      message += `   📅 ${date}\n`;
+      if (companyCode) message += `   🏢 ${esc(companyCode)}\n`;
+      message += `   💬 ${esc(msgText)}\n`;
+      if (queryPreview) message += `   🗄 <code>${esc(queryPreview)}</code>\n`;
+      message += '\n';
+    }
+
+    if (remainingLogs.length > 0) {
+      const idsToShow = remainingLogs.slice(0, 10);
+      const remainingIds = idsToShow.map(log => log.id.substring(0, 8)).join(', ');
+      const hiddenCount = remainingLogs.length > 10 ? remainingLogs.length - 10 : 0;
+
+      message += `\n<i>⚠️ Additional ${remainingLogs.length} error(s) not shown:</i>\n`;
+      message += `<code>${remainingIds}</code>`;
+
+      if (hiddenCount > 0) {
+        message += `\n<i>... and ${hiddenCount} more</i>`;
+      }
+
+      message += `\n<i>Use /errorlog &lt;id&gt; to view and mark as reminded</i>`;
+    }
+
+    const chatId = process.env.CHAT_ID;
+    if (chatId) {
+      await bot.sendMessage(chatId, message, {
+        parse_mode: 'HTML',
+        message_thread_id: BOT_TOPIC_ID
+      });
+
+      const displayedIds = displayLogs.map(log => log.id);
+      await markErrorLogsAsReminded(displayedIds);
+
+      console.log(`[${label}] Sent ${displayLogs.length} error log(s) to bot topic. ${remainingLogs.length} remaining.`);
+    }
+  } catch (err) {
+    console.error(`[${label}] Error sending error notification:`, err);
+  }
+};
+
+// Error notification at 9:00 AM (Mon-Fri)
+cron.schedule('0 9 * * 1-5', () => {
+  sendErrorNotificationToTopic('9:00 AM');
+}, { scheduled: true, timezone: timezone });
+
+// Error notification at 12:00 PM (Mon-Fri)
+cron.schedule('0 12 * * 1-5', () => {
+  sendErrorNotificationToTopic('12:00 PM');
+}, { scheduled: true, timezone: timezone });
+
+// Error notification at 3:00 PM (Mon-Fri)
+cron.schedule('0 15 * * 1-5', () => {
+  sendErrorNotificationToTopic('3:00 PM');
+}, { scheduled: true, timezone: timezone });
+
 // Error handling for polling errors
 bot.on('polling_error', (error) => {
   console.error('Polling error:', error.code, error.message);
@@ -876,7 +874,7 @@ bot.on('message', (msg) => {
   if (msg.message_thread_id !== BOT_TOPIC_ID) return; // only in PayrollBot topic
   if (!msg.text || msg.text.startsWith('/')) return;   // allow commands, ignore non-text
   // Delete regular chat messages
-  bot.deleteMessage(msg.chat.id, msg.message_id).catch(() => {});
+  bot.deleteMessage(msg.chat.id, msg.message_id).catch(() => { });
 });
 
 // Helper: reply in the same topic/thread the command was sent from
@@ -1000,9 +998,9 @@ bot.onText(/^\/dev(?:\s+(.+))?$/, async (msg, match) => {
   // Only track if it's not a forwarded message with URL (containing ://)
   if (!msg.text.includes('://')) {
     trackCommand(msg.chat.id, msg.message_id);
-  if (msg.chat.type !== 'private' && msg.message_thread_id !== BOT_TOPIC_ID) {
-    return reply(msg, '⚠️ Please use the <b>PayrollBot</b> topic to interact with this bot.', { parse_mode: 'HTML', ...(msg.message_thread_id && { message_thread_id: msg.message_thread_id }) });
-  }
+    if (msg.chat.type !== 'private' && msg.message_thread_id !== BOT_TOPIC_ID) {
+      return reply(msg, '⚠️ Please use the <b>PayrollBot</b> topic to interact with this bot.', { parse_mode: 'HTML', ...(msg.message_thread_id && { message_thread_id: msg.message_thread_id }) });
+    }
   }
   const userId = msg.from.id.toString();
 
@@ -2647,7 +2645,7 @@ bot.onText(/^\/dbstore$/, async (msg) => {
     setTimeout(() => {
       if (pendingDbRestore.has(msg.chat.id)) {
         pendingDbRestore.delete(msg.chat.id);
-        bot.deleteMessage(msg.chat.id, promptMsg.message_id).catch(() => {});
+        bot.deleteMessage(msg.chat.id, promptMsg.message_id).catch(() => { });
       }
     }, 60000);
 
@@ -2678,7 +2676,7 @@ bot.on('document', async (msg) => {
     }
 
     // Delete prompt message
-    await bot.deleteMessage(chatId, pending.messageId).catch(() => {});
+    await bot.deleteMessage(chatId, pending.messageId).catch(() => { });
     pendingDbRestore.delete(chatId);
 
     // Download file
