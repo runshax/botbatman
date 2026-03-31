@@ -221,6 +221,258 @@
           }
         }
       }
+    },
+    "04": {
+      "month_name": "April 2026",
+      "schedule": {
+        "2026-04-01": {
+          "day": "Wednesday, 01 April 2026",
+          "meals": {
+            "Nasi": "Nasi",
+            "Pagi": "Daging Kecap Pedas",
+            "Lauk 1": "Tahu Isi Goreng",
+            "Lauk 2": "Capcay Goreng",
+            "Sayur": "Pangsit Goreng",
+            "Sambal": "Sambal",
+            "Buah": "Buah"
+          }
+        },
+        "2026-04-02": {
+          "day": "Thursday, 02 April 2026",
+          "meals": {
+            "Nasi": "Nasi",
+            "Pagi": "Ayam Tuturuga",
+            "Lauk 1": "Tumis Labu siem",
+            "Lauk 2": "Bakwan Sayur",
+            "Sayur": "Orek Tempe",
+            "Sambal": "Sambal",
+            "Buah": "Buah"
+          }
+        },
+        "2026-04-06": {
+          "day": "Monday, 06 April 2026",
+          "meals": {
+            "Nasi": "Nasi",
+            "Pagi": "Gurame Bumbu kuning",
+            "Lauk 1": "Tumis Labu siem-kacang panjang",
+            "Lauk 2": "Peyek Kacang",
+            "Sayur": "Tempe Goreng",
+            "Sambal": "Sambal",
+            "Buah": "Buah"
+          }
+        },
+        "2026-04-07": {
+          "day": "Tuesday, 07 April 2026",
+          "meals": {
+            "Nasi": "Nasi",
+            "Pagi": "Ayam Goreng Chili oil garlic",
+            "Lauk 1": "Capcay",
+            "Lauk 2": "Jamur Crispy",
+            "Sayur": "Telur Orek",
+            "Sambal": "Sambal",
+            "Buah": "Buah"
+          }
+        },
+        "2026-04-08": {
+          "day": "Wednesday, 08 April 2026",
+          "meals": {
+            "Nasi": "Nasi",
+            "Pagi": "Daging Rendang",
+            "Lauk 1": "Sayur Nangka",
+            "Lauk 2": "Tumis Buncis Putren",
+            "Sayur": "Bakwan Jagung",
+            "Sambal": "Sambal",
+            "Buah": "Buah"
+          }
+        },
+        "2026-04-09": {
+          "day": "Thursday, 09 April 2026",
+          "meals": {
+            "Nasi": "Nasi",
+            "Pagi": "Ayam Goreng Lengkuas",
+            "Lauk 1": "Terong Balado",
+            "Lauk 2": "Bakwan Sayur",
+            "Sayur": "Sup Kimlo",
+            "Sambal": "Sambal",
+            "Buah": "Buah"
+          }
+        },
+        "2026-04-10": {
+          "day": "Friday, 10 April 2026",
+          "meals": {
+            "Nasi": "Lontong Cap gomeh",
+            "Pagi": "Soto Ayam",
+            "Lauk 1": "Telur Rebus",
+            "Lauk 2": "Keerupuk Udang",
+            "Sambal": "Sambal",
+            "Buah": "Buah"
+          }
+        },
+        "2026-04-13": {
+          "day": "Monday, 13 April 2026",
+          "meals": {
+            "Nasi": "Nasi",
+            "Pagi": "Ikan Kue Sambal Dhabu",
+            "Lauk 1": "Lalapan",
+            "Lauk 2": "Tahu Goreng",
+            "Sayur": "Cah Tauge",
+            "Sambal": "Sambal",
+            "Buah": "Buah"
+          }
+        },
+        "2026-04-14": {
+          "day": "Tuesday, 14 April 2026",
+          "meals": {
+            "Nasi": "Nasi",
+            "Pagi": "Chicken Sweet Sour",
+            "Lauk 1": "Salad sayuran",
+            "Lauk 2": "Risol Goreng",
+            "Sayur": "Tempe Goreng Tepung",
+            "Sambal": "Sambal",
+            "Buah": "Buah"
+          }
+        },
+        "2026-04-15": {
+          "day": "Wednesday, 15 April 2026",
+          "meals": {
+            "Nasi": "Nasi",
+            "Pagi": "Daging Empal",
+            "Lauk 1": "Telur balado",
+            "Lauk 2": "Gado-Gado",
+            "Sayur": "Bakwan sayur",
+            "Sambal": "Sambal Hijau",
+            "Buah": "Buah"
+          }
+        },
+        "2026-04-16": {
+          "day": "Thursday, 16 April 2026",
+          "meals": {
+            "Nasi": "Nasi",
+            "Pagi": "Ayam Rica-Rica",
+            "Lauk 1": "Tahu Goreng Tepung",
+            "Lauk 2": "Tumis Buncis Garlic",
+            "Sayur": "Peyek Kacang",
+            "Sambal": "Sambal",
+            "Buah": "Buah"
+          }
+        },
+        "2026-04-17": {
+          "day": "Friday, 17 April 2026",
+          "meals": {
+            "Nasi": "Lontong Cap gomeh",
+            "Pagi": "Kerupuk Udang",
+            "Sambal": "Sambal",
+            "Buah": "Buah"
+          }
+        },
+        "2026-04-20": {
+          "day": "Monday, 20 April 2026",
+          "meals": {
+            "Nasi": "Nasi",
+            "Pagi": "Bawal Goreng",
+            "Lauk 1": "Tumis Kangkung",
+            "Lauk 2": "Orek Tempe",
+            "Sayur": "Tahu Goreng",
+            "Sambal": "Sambal",
+            "Buah": "Buah"
+          }
+        },
+        "2026-04-21": {
+          "day": "Tuesday, 21 April 2026",
+          "meals": {
+            "Nasi": "Nasi",
+            "Pagi": "Ayam Goreng Bumbu Rempah",
+            "Lauk 1": "Tumis Buncis Ayam Daun kari",
+            "Lauk 2": "Bakwan Sayur",
+            "Sayur": "Sup Bakso",
+            "Sambal": "Sambal",
+            "Buah": "Buah"
+          }
+        },
+        "2026-04-22": {
+          "day": "Wednesday, 22 April 2026",
+          "meals": {
+            "Nasi": "Nasi",
+            "Pagi": "Daging Black Garlic Sc",
+            "Lauk 1": "Sapo Tofu",
+            "Lauk 2": "Risol",
+            "Sayur": "Peyek Kacang",
+            "Sambal": "Sambal",
+            "Buah": "Buah"
+          }
+        },
+        "2026-04-23": {
+          "day": "Thursday, 23 April 2026",
+          "meals": {
+            "Nasi": "Nasi",
+            "Pagi": "Ayam Pedas Manis",
+            "Lauk 1": "Tumis Toge,Wortel,pokcay",
+            "Lauk 2": "Tempe Cabai ijo",
+            "Sayur": "Tahu Isi",
+            "Sambal": "Sambal",
+            "Buah": "Buah"
+          }
+        },
+        "2026-04-24": {
+          "day": "Friday, 24 April 2026",
+          "meals": {
+            "Nasi": "Nasi Goreng Ayam Giling + sayur",
+            "Pagi": "Chicken Katsu",
+            "Lauk": "Salad",
+            "Sayur": "Kerupuk",
+            "Sambal": "sambal",
+            "Buah": "Buah"
+          }
+        },
+        "2026-04-27": {
+          "day": "Monday, 27 April 2026",
+          "meals": {
+            "Nasi": "Nasi",
+            "Pagi": "Ikan Kembung Goreng",
+            "Lauk 1": "Orak Arik Tahu",
+            "Lauk 2": "Pokcay Garlik",
+            "Sayur": "Tempe Bumbu Kari",
+            "Sambal": "Sambal",
+            "Buah": "Buah"
+          }
+        },
+        "2026-04-28": {
+          "day": "Tuesday, 28 April 2026",
+          "meals": {
+            "Nasi": "Nasi",
+            "Pagi": "Ayam Serundeng",
+            "Lauk 1": "Bakwan Jagung",
+            "Lauk 2": "Tumis Bayam",
+            "Sayur": "Terong Balado",
+            "Sambal": "Sambal",
+            "Buah": "Buah"
+          }
+        },
+        "2026-04-29": {
+          "day": "Wednesday, 29 April 2026",
+          "meals": {
+            "Nasi": "Nasi",
+            "Pagi": "Bistik Daging",
+            "Lauk 1": "Steak Sayuran",
+            "Lauk 2": "Risol Goreng",
+            "Sayur": "Sup Asparagus",
+            "Sambal": "Sambal",
+            "Buah": "Buah"
+          }
+        },
+        "2026-04-30": {
+          "day": "Thursday, 30 April 2026",
+          "meals": {
+            "Nasi": "Nasi",
+            "Pagi": "Ayam Sambal Geprek",
+            "Lauk 1": "Lalapan",
+            "Lauk 2": "Tahu Goreng",
+            "Sayur": "Tempe Goreng",
+            "Sambal": "Sambal",
+            "Buah": "Buah"
+          }
+        }
+      }
     }
   }
 }
