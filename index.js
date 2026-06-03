@@ -582,8 +582,8 @@ cron.schedule('45 16 * * 1-5', () => {
   timezone: timezone
 });
 
-// Lunch Menu Notification: 10:40 AM (Mon-Fri)
-cron.schedule('40 10 * * 1-5', () => {
+// Lunch Menu Notification: 10:30 AM (Mon-Fri)
+cron.schedule('30 10 * * 1-5', () => {
   const holiday = getTodayHoliday();
 
   // Skip notification if today is a public holiday
@@ -638,7 +638,7 @@ cron.schedule('40 10 * * 1-5', () => {
       .then(msg => trackMessage(msg.chat.id, msg.message_id))
       .catch(err => console.error("Error sending lunch menu notification:", err));
 
-    console.log(`Lunch menu notification sent at 10:40 AM for ${todayStr}`);
+    console.log(`Lunch menu notification sent at 10:30 AM for ${todayStr}`);
   } catch (error) {
     console.error('Error loading lunch menu:', error);
   }
@@ -958,7 +958,7 @@ bot.onText(/^\/help$/, (msg) => {
     `   _Example:_ \`/clear\`\n\n` +
 
     `1️⃣1️⃣ */lunch*\n` +
-    `   Check today's lunch menu (auto-notified at 10:40 AM)\n` +
+    `   Check today's lunch menu (auto-notified at 10:30 AM)\n` +
     `   _Example:_ \`/lunch\`\n\n` +
 
     `1️⃣2️⃣ */holiday*\n` +
