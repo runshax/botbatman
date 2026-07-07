@@ -866,8 +866,8 @@ bot.on('polling_error', (error) => {
 });
 
 // ==================== TOPIC GUARD ====================
-// Only allow user commands in the PayrollBot topic (thread 6119)
-const BOT_TOPIC_ID = 6119;
+// Only allow user commands in the PayrollBot topic (thread 15982)
+const BOT_TOPIC_ID = 15982;
 
 // Auto-delete non-command messages in PayrollBot topic
 bot.on('message', (msg) => {
