@@ -5,7 +5,9 @@ const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: {
     rejectUnauthorized: false // Required for Koyeb hosted databases
-  }
+  },
+  max: 3,
+  idleTimeoutMillis: 10000 // close idle connections quickly so Neon can autosuspend
 });
 
 // Initialize database tables
