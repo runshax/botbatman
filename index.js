@@ -504,6 +504,15 @@ setTimeout(() => {
   bot.startPolling();
 }, 5000);
 
+// Watchdog: if polling silently stops (scheduled jobs keep the process alive, so
+// Koyeb won't restart it), start it again instead of leaving the bot deaf.
+setInterval(() => {
+  if (!bot.isPolling()) {
+    console.log('Watchdog: polling is not active, restarting polling...');
+    bot.startPolling().catch(err => console.error('Watchdog: failed to restart polling:', err));
+  }
+}, 60000);
+
 // 3. SCHEDULED REMINDERS (Mon-Fri)
 const timezone = "Asia/Jakarta";
 

@@ -10,6 +10,12 @@ const pool = new Pool({
   idleTimeoutMillis: 10000 // close idle connections quickly so Neon can autosuspend
 });
 
+// Idle clients can be dropped by Neon when it suspends; without a listener this
+// 'error' event would be an uncaught exception and crash the process.
+pool.on('error', (err) => {
+  console.error('Unexpected error on idle database client:', err.message);
+});
+
 // Initialize database tables
 const initDatabase = async () => {
   try {
