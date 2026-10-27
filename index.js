@@ -15,6 +15,16 @@ if (typeof fetch === 'undefined') {
   process.exit(1);
 }
 
+// Log the runtime Node version and warn if it predates the Oct 2026 security
+// release (TLS hostname bypass, Brotli RCE) so a stale host build is visible.
+const PATCHED_NODE = { 22: [22, 23, 4], 24: [24, 22, 1], 26: [26, 12, 1] };
+const nodeParts = process.versions.node.split('.').map(Number);
+const patchedMin = PATCHED_NODE[nodeParts[0]];
+const isPatchedNode = patchedMin
+  ? nodeParts[1] > patchedMin[1] || (nodeParts[1] === patchedMin[1] && nodeParts[2] >= patchedMin[2])
+  : nodeParts[0] > 26; // lines not in the table (e.g. 20, 25) have no fix in the advisory
+console.log(`Node.js ${process.version}${isPatchedNode ? '' : ' - WARNING: not on a patched release (use ' + Object.values(PATCHED_NODE).map(v => v.join('.')).join(' / ') + ' or newer), security fixes missing'}`);
+
 // Initialize database on startup
 initDatabase();
 
