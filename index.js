@@ -1,4 +1,4 @@
-const TelegramBot = require('node-telegram-bot-api');
+const { TelegramBot } = require('node-telegram-bot-api');
 const cron = require('node-cron');
 const express = require('express');
 const { encryptPassword } = require('./services/passwordEncryption');
