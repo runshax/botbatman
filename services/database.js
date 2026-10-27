@@ -4,7 +4,7 @@ const { Pool } = require('pg');
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: {
-    rejectUnauthorized: false // Required for Koyeb hosted databases
+    rejectUnauthorized: true // Neon presents a valid CA-signed certificate; verify it
   },
   max: 3,
   idleTimeoutMillis: 10000 // close idle connections quickly so Neon can autosuspend
