@@ -988,7 +988,7 @@ bot.onText(/^\/help$/, (msg) => {
     `   Auto-format SFGO numbers for dev or QA environment\n` +
     `   _Examples:_\n` +
     `   \`/sfgo11199\` → \`sfgo11199-dev-gd|http://localhost:3001\`\n` +
-    `   \`/sfgo11199 qa\` → \`sfgo11199-gd|https://payroll.greatdayhr.com/payrollqa4\`\n\n` +
+    `   \`/sfgo11199 qa\` → \`sfgo11199-gd|https://payroll.greatdayhr.com/debug/gdc2\`\n\n` +
 
     `1️⃣4️⃣ */de64*\n` +
     `   Decode base64 database credentials (filters _fin and _admin only)\n` +
@@ -1597,7 +1597,7 @@ bot.onText(/^\/sfgo(\d+)(?:\s+(qa))?$/i, async (msg, match) => {
     let result;
     if (isQa) {
       // QA environment URL
-      result = `sfgo${number}-gd|https://payroll.greatdayhr.com/payrollqa4`;
+      result = `sfgo${number}-gd|https://payroll.greatdayhr.com/debug/gdc2`;
     } else {
       // Dev environment URL (default)
       result = `sfgo${number}-dev-gd|http://localhost:3001`;

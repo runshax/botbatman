@@ -486,7 +486,7 @@ Quick SFGO URL formatter for dev and QA environments.
 | Command | Output | Environment |
 |---------|--------|-------------|
 | `/sfgo[number]` | `sfgoXXXX-dev-gd\|http://localhost:3001` | Development |
-| `/sfgo[number] qa` | `sfgoXXXX-gd\|https://payroll.greatdayhr.com/payrollqa4` | QA |
+| `/sfgo[number] qa` | `sfgoXXXX-gd\|https://payroll.greatdayhr.com/debug/gdc2` | QA |
 
 #### Examples
 
@@ -495,7 +495,7 @@ Input:  /sfgo11199
 Output: sfgo11199-dev-gd|http://localhost:3001
 
 Input:  /sfgo11199 qa
-Output: sfgo11199-gd|https://payroll.greatdayhr.com/payrollqa4
+Output: sfgo11199-gd|https://payroll.greatdayhr.com/debug/gdc2
 ```
 
 ---
